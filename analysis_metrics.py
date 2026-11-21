@@ -8,7 +8,7 @@ from matplotlib.patches import Patch, Rectangle
 import numpy as np
 from scipy.spatial import cKDTree
 
-from disturbances import plan_events, scenarios
+from disturbances import plan_events
 from errors import probability
 from geometry import BUILDINGS, CAMERA, RADIUS, SPEED, STARTS, TARGETS, pointing
 from problem1 import classification_grid
@@ -148,10 +148,11 @@ def _bounded_chain(centers, half, prefix, second_slew, upper):
     return chain
 
 
-def plot_schedule(out, optimized, nearest):
-    fig, axes = plt.subplots(2, 1, figsize=(9, 6.1), sharex=True, constrained_layout=True)
+def plot_schedule(out, optimized, nearest, earliest):
+    fig, axes = plt.subplots(3, 1, figsize=(9, 8.4), sharex=True, constrained_layout=True)
     shading = {"travel": .44, "slew": .33, "wait_sync": .11, "observe": 1., "reset": .2}
-    for label, plan, ax in zip(("Optimized", "Nearest assignment"), (optimized, nearest), axes):
+    for label, plan, ax in zip(("Optimized", "Nearest assignment", "Earliest-ready greedy"),
+                               (optimized, nearest, earliest), axes):
         for event in plan_events(plan):
             width = event.end - event.begin
             if width <= 0:
@@ -189,16 +190,56 @@ def plot_probability(out, result):
     plt.close(fig)
 
 
+def plot_intersection_sweep(out, records):
+    fig, (error, tails, rejection) = plt.subplots(3, 1, figsize=(8.2, 7.5), sharex=True, constrained_layout=True)
+    for r, s, color in ((10., 10., "#0b7493"), (10., 20., "#9a552a"), (10., 40., "#508351")):
+        group = [row for row in records if row["range_1_m"] == r and row["range_2_m"] == s]
+        angle = [row["angle_deg"] for row in group]
+        label = f"{r:g}/{s:g} m"
+        error.plot(angle, [row["theoretical_drms_m"] for row in group], color=color, label=f"{label} linear DRMS")
+        error.plot(angle, [row["conditional_rmse_m"] for row in group], "o--", color=color,
+                   markersize=3, label=f"{label} conditional RMSE")
+        tails.plot(angle, [row["linear_p95_m"] for row in group], color=color, label=f"{label} linear")
+        tails.plot(angle, [row["unfiltered_p95_m"] for row in group], "o--", color=color,
+                   markersize=3, label=f"{label} nonlinear")
+        if r == s:
+            rejection.plot(angle, [100. * row["rejection_rate"] for row in group], "o-", color=color, markersize=3)
+    error.set(yscale="log", ylabel="DRMS / RMSE (m)")
+    error.legend(ncol=3, fontsize=7)
+    tails.set(yscale="log", ylabel="Unfiltered P95 (m)")
+    tails.legend(ncol=3, fontsize=7)
+    rejection.set(xlabel="Nominal intersection angle (degrees)", ylabel="Rejected (%)", ylim=(0, 105))
+    for ax in (error, tails, rejection):
+        ax.grid(alpha=.18)
+    fig.savefig(out / "q2_intersection_errors.png", dpi=180)
+    plt.close(fig)
+
+
+def plot_variance_shares(out, records, critical):
+    fig, ax = plt.subplots(figsize=(7, 4.1), constrained_layout=True)
+    for key, label, color in (("position", "Vehicle position", "#0b7493"), ("zero_offset", "Gimbal zero offset", "#9a552a"),
+                              ("control", "Gimbal control", "#508351")):
+        ax.plot([row["distance_m"] for row in records], [100. * row[key] for row in records], label=label, color=color)
+    for key, level in (("position_overtakes_zero_offset_m", 34), ("position_overtakes_combined_gimbal_m", 54)):
+        value = critical[key]
+        ax.axvline(value, color="#777777", lw=1, ls="--")
+        ax.annotate(f"{value:.2f} m", (value, level), xytext=(4, 0), textcoords="offset points", fontsize=8)
+    ax.set(xlabel="Cumulative travel distance (m)", ylabel="First-order variance share (%)", ylim=(0, 100))
+    ax.grid(alpha=.18)
+    ax.legend()
+    fig.savefig(out / "q3_variance_shares.png", dpi=180)
+    plt.close(fig)
+
+
 def plot_scenarios(out, records):
-    _, design = scenarios()
-    kinds = list(dict.fromkeys(s.kind for s in design if s.kind != "nominal"))
-    policies = ("retain", "retain_plus", "replan")
+    kinds = list(dict.fromkeys(r["kind"] for r in records if r["kind"] != "nominal"))
+    policies = ("retain", "retain_plus", "repair", "replan")
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.7), constrained_layout=True)
     x = np.arange(len(kinds))
-    for j, (policy, color) in enumerate(zip(policies, ("#a3aab4", "#bf6944", "#187e83"))):
+    for j, (policy, color) in enumerate(zip(policies, ("#a3aab4", "#bf6944", "#2876a3", "#187e83"))):
         group = [[r for r in records if r["kind"] == kind and r["policy"] == policy] for kind in kinds]
         for ax, metric in zip(axes, ("eta", "t_last_s")):
-            ax.bar(x + .24 * (j - 1), [np.mean([r[metric] for r in g]) for g in group], width=.23,
+            ax.bar(x + .20 * (j - 1.5), [np.mean([r[metric] for r in g]) for g in group], width=.19,
                    color=color, label=policy.replace("_", " "))
     for ax in axes:
         ax.set(xticks=x, xticklabels=[k.replace("+", "\n+") for k in kinds])

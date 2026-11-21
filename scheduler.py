@@ -1,6 +1,7 @@
 """Finite-candidate schedule search and full schedule reconstruction."""
-from dataclasses import dataclass
-from itertools import combinations
+from copy import copy
+from dataclasses import dataclass, replace
+from itertools import combinations, permutations
 
 import numpy as np
 
@@ -31,6 +32,7 @@ class State:
     releases: tuple
     choices: tuple = ()
     latest: float = 0.
+    used: int = 0
 
 
 @dataclass
@@ -45,6 +47,14 @@ class Leg:
     slew: float
     initial_pan: float = 0.
     initial_tilt: float = 0.
+    continued: bool = False
+
+
+@dataclass(frozen=True)
+class Continuation:
+    target: str
+    station: int
+    leg: Leg
 
 
 @dataclass
@@ -60,24 +70,18 @@ class Space:
             raise ValueError("Invalid RMSE ceiling, minimum pair angle or line-of-sight margin.")
         self.router = router
         self.targets = {target.name: target for target in targets}
-        self.exhaustive_fallback = max_rmse is not None or min_angle != MIN_ANGLE or los_margin > 0.
-        axis = np.unique(np.r_[RADIUS, np.arange(grid, 100., grid), 100. - RADIUS])
-        coordinates = np.column_stack([a.ravel() for a in np.meshgrid(axis, axis)])
-        phi = np.deg2rad(np.arange(0., 360., 15.))
-        direction = np.column_stack((np.cos(phi), np.sin(phi)))
-        rings = [t.xy + factor * t.min_range * direction for t in targets for factor in (1., 1.5)]
-        points = np.unique(np.vstack([coordinates, anchors, *rings]), axis=0)
+        self.max_rmse, self.min_angle, self.los_margin = max_rmse, min_angle, los_margin
+        if grid is None:
+            points = np.unique(anchors, axis=0)
+        else:
+            axis = np.unique(np.r_[RADIUS, np.arange(grid, 100., grid), 100. - RADIUS])
+            coordinates = np.column_stack([a.ravel() for a in np.meshgrid(axis, axis)])
+            phi = np.deg2rad(np.arange(0., 360., 15.))
+            direction = np.column_stack((np.cos(phi), np.sin(phi)))
+            rings = [t.xy + factor * t.min_range * direction for t in targets for factor in (1., 1.5)]
+            points = np.unique(np.vstack([coordinates, anchors, *rings]), axis=0)
         free = router.free_points(points)
-        visible = {}
-        for name, target in self.targets.items():
-            if max_rmse is None:
-                visible[name] = _visible_with_margin(points, target, los_margin)
-            else:
-                distance = np.linalg.norm(target.xy - points, axis=1)
-                close = (AZIMUTH_SD * np.hypot(distance, target.min_range) <= max_rmse + EPS) & free
-                mask = np.zeros(len(points), dtype=bool)
-                mask[close] = _visible_with_margin(points[close], target, los_margin)
-                visible[name] = mask
+        visible = {name: self._station_mask(points, target, free) for name, target in self.targets.items()}
         keep = free & np.any(tuple(visible.values()), axis=0)
         self.points = points[keep]
         self.station_ids = {name: np.flatnonzero(good[keep]) for name, good in visible.items()}
@@ -87,22 +91,29 @@ class Space:
             stations = self.points[ids]
             target = self.targets[name]
             self.slews[name] = pointing(stations, target)[2]
-            u = target.xy - stations
-            distance = np.linalg.norm(u, axis=1)
-            u /= distance[:, None]
-            sine = np.abs(u[:, [0]] * u[:, 1] - u[:, [1]] * u[:, 0])
-            dx = stations[:, [0]] - stations[:, 0]
-            dy = stations[:, [1]] - stations[:, 1]
-            sine_floor = np.sin(np.deg2rad(min_angle))
-            if min_angle != MIN_ANGLE:
-                sine_floor -= EPS
-            compatible = (sine >= sine_floor) & (dx * dx + dy * dy >= (2 * RADIUS - EPS) ** 2)
-            if max_rmse is not None:
-                rmse_numerator = AZIMUTH_SD * np.hypot(distance[:, None], distance)
-                compatible &= rmse_numerator <= (max_rmse + EPS) * sine
-            self.compatible[name] = compatible
+            self.compatible[name] = self._compatible(target, stations, stations)
         self.travel = self._travel(self.points, self.points)
         self.min_ready = {}
+
+    def _station_mask(self, points, target, free):
+        close = free.copy()
+        if self.max_rmse is not None:
+            distance = np.linalg.norm(target.xy - points, axis=1)
+            close &= AZIMUTH_SD * np.hypot(distance, target.min_range) <= self.max_rmse + EPS
+        close[close] = _visible_with_margin(points[close], target, self.los_margin)
+        return close
+
+    def _compatible(self, target, p, q):
+        u, v = target.xy - p, target.xy - q
+        r, s = np.linalg.norm(u, axis=1), np.linalg.norm(v, axis=1)
+        u, v = u / r[:, None], v / s[:, None]
+        sine = np.abs(u[:, [0]] * v[:, 1] - u[:, [1]] * v[:, 0])
+        dx, dy = p[:, [0]] - q[:, 0], p[:, [1]] - q[:, 1]
+        sine_floor = np.sin(np.deg2rad(self.min_angle)) - (EPS if self.min_angle != MIN_ANGLE else 0.)
+        compatible = (sine >= sine_floor) & (dx * dx + dy * dy >= (2 * RADIUS - EPS) ** 2)
+        if self.max_rmse is not None:
+            compatible &= AZIMUTH_SD * np.hypot(r[:, None], s) <= (self.max_rmse + EPS) * sine
+        return compatible
 
     def _travel(self, starts, ends):
         if not len(starts) or not len(ends):
@@ -129,32 +140,109 @@ class Space:
             self.min_ready.clear()
         return tuple(ids)
 
-    def lower_ready(self, target, positions, releases):
+    def with_current_stations(self, positions):
+        """Give one scenario its own additional stops at the current vehicle positions."""
+        result = copy(self)
+        result.min_ready = {}
+        result.station_ids = self.station_ids.copy()
+        result.slews = self.slews.copy()
+        result.compatible = self.compatible.copy()
+        ids = np.unique(result.origins(positions))
+        points = result.points[ids]
+        free = self.router.free_points(points)
+        for name, target in self.targets.items():
+            old = self.station_ids[name]
+            new = np.setdiff1d(ids[self._station_mask(points, target, free)], old)
+            if not len(new):
+                continue
+            combined = np.union1d(old, new)
+            a, b = np.searchsorted(combined, old), np.searchsorted(combined, new)
+            compatible = np.empty((len(combined), len(combined)), dtype=bool)
+            cross = self._compatible(target, result.points[new], result.points[combined])
+            compatible[b] = cross
+            compatible[:, b] = cross.T
+            compatible[np.ix_(a, a)] = self.compatible[name]
+            result.station_ids[name] = combined
+            result.slews[name] = pointing(result.points[combined], target)[2]
+            result.compatible[name] = compatible
+        return result
+
+    def lower_ready(self, target, state, continuations):
         if target not in self.min_ready:
             ids = self.station_ids[target]
             self.min_ready[target] = (self.travel[:, ids] + self.slews[target]).min(axis=1, initial=np.inf)
-        return float(np.partition(self.min_ready[target][list(positions)] + releases, 1)[1])
+        ready = self.min_ready[target][list(state.positions)] + state.releases
+        for v, ongoing in continuations.items():
+            if not (state.used & (1 << v)) and ongoing.target == target:
+                ready[v] = min(ready[v], ongoing.leg.ready)
+        return float(np.partition(ready, 1)[1])
 
 
-def _options(space, state, target, pair, limit, branch, nearest):
+def _ready_times(space, state, target, vehicles, continuations):
     ids = space.station_ids[target]
-    if not len(ids):
+    drive = space.travel[np.ix_([state.positions[v] for v in vehicles], ids)]
+    ready = drive + space.slews[target] + np.asarray([state.releases[v] for v in vehicles])[:, None]
+    saved = {}
+    for row, v in enumerate(vehicles):
+        ongoing = continuations.get(v)
+        if ongoing is not None and ongoing.target == target and not (state.used & (1 << v)):
+            ix = np.searchsorted(ids, ongoing.station)
+            if ix < len(ids) and ids[ix] == ongoing.station:
+                ready[row, ix] = ongoing.leg.ready
+                saved[row] = ix
+    return drive, ready, saved
+
+
+def _options(space, state, target, pair, limit, branch, not_before, deadline, continuations,
+             *, greedy=None, fixed_stations=None):
+    ids = space.station_ids[target]
+    if not len(ids) or not_before > deadline + EPS:
         return
-    i, j = pair
-    drive = space.travel[np.ix_([state.positions[i], state.positions[j]], ids)]
-    ready = drive + space.slews[target] + np.array([state.releases[i], state.releases[j]])[:, None]
-    if nearest or limit is None:
-        a = b = np.arange(len(ids))
-    else:
-        a, b = (np.argsort(row, kind="stable")[:limit] for row in ready)
+    slew = space.slews[target]
+    drive, ready, saved = _ready_times(space, state, target, pair, continuations)
+    shortlist = []
+    for row in range(2):
+        prior = saved.get(row)
+        if fixed_stations is not None:
+            ix = np.searchsorted(ids, fixed_stations[row])
+            if ix == len(ids) or ids[ix] != fixed_stations[row] or ready[row, ix] > deadline + EPS:
+                return
+            shortlist.append(np.array([ix]))
+            continue
+        available = np.flatnonzero(ready[row] <= deadline + EPS) if np.isfinite(deadline) else np.arange(len(ids))
+        if not len(available):
+            return
+        if limit is not None and len(available) > limit:
+            available = available[np.argsort(ready[row, available], kind="stable")[:limit]]
+            if prior is not None and prior not in available and ready[row, prior] <= deadline + EPS:
+                available = np.r_[available, prior]
+        shortlist.append(available)
+    a, b = shortlist
     feasible = space.compatible[target][np.ix_(a, b)]
-    start = np.maximum(np.maximum(ready[0, a, None], ready[1, b]), state.latest)
-    if nearest:
-        rank = drive[0, a, None] + drive[1, b]
-    else:
-        slew = space.slews[target]
-        rank = start + 0.04 * (slew[a, None] + slew[b]) + 0.02 * (ready[0, a, None] + ready[1, b])
-    rank = np.where(feasible, rank, np.inf)
+    start = np.maximum(np.maximum(ready[0, a, None], ready[1, b]), not_before)
+    if greedy:
+        distance = drive[0, a, None] + drive[1, b]
+        primary, secondary = (distance, start) if greedy == "nearest" else (start, distance)
+        ranked = np.where(feasible, primary, np.inf)
+        best = ranked.min()
+        if not np.isfinite(best):
+            return
+        equal = np.flatnonzero(ranked.ravel() <= best + (EPS if greedy == "nearest" else 0.))
+        index = equal[np.argmin(secondary.ravel()[equal])]
+        x, y = np.unravel_index(index, ranked.shape)
+        yield (float(distance[x, y]), Choice(target, pair, (int(ids[a[x]]), int(ids[b[y]])), float(start[x, y])),
+               (float(slew[a[x]]), float(slew[b[y]])))
+        return
+    if branch is None:
+        # Complete enumeration for a finite-pool certificate; no shortlist ranking.
+        rows, cols = np.nonzero(feasible & np.isfinite(start))
+        for index in np.argsort(start[rows, cols], kind="stable"):
+            x, y = rows[index], cols[index]
+            yield (float(start[x, y]), Choice(target, pair, (int(ids[a[x]]), int(ids[b[y]])), float(start[x, y])),
+                   (float(slew[a[x]]), float(slew[b[y]])))
+        return
+    rank = np.where(feasible, start + 0.04 * (slew[a, None] + slew[b]) +
+                    0.02 * (ready[0, a, None] + ready[1, b]), np.inf)
     flat = rank.ravel()
     valid = np.flatnonzero(np.isfinite(flat))
     if not len(valid):
@@ -169,28 +257,41 @@ def _options(space, state, target, pair, limit, branch, nearest):
 
 def _advance(state, choice, slews):
     positions, releases = list(state.positions), list(state.releases)
+    used = state.used
     for vehicle, station, slew in zip(choice.vehicles, choice.stations, slews):
         positions[vehicle] = station
         releases[vehicle] = choice.start + OBSERVE + slew
-    return State(tuple(positions), tuple(releases), (*state.choices, choice), choice.start)
+        used |= 1 << vehicle
+    return State(tuple(positions), tuple(releases), (*state.choices, choice), max(state.latest, choice.start), used)
 
 
-def solve(space, initial, targets, width=12, limit=12, branch=2, deadline=60., nearest=False):
-    """Beam search by completed-alert subset; earliest start for each chosen pair."""
+def solve(space, initial, targets, width=12, limit=12, branch=2, deadline=60., nearest=False, *,
+          earliest=False, continuations=None, stats=None):
+    """Beam search by assigned-alert subset; only shared vehicles impose precedence."""
+    if nearest and earliest:
+        raise ValueError("Select one greedy baseline.")
+    continuations = continuations or {}
+    hold_mask = sum(1 << v for v in continuations)
     targets = tuple(target for target in targets if space.compatible[target].any())
     pairs = tuple(combinations([i for i, time in enumerate(initial.releases) if np.isfinite(time)], 2))
-    if nearest:
+    if nearest or earliest:
+        criterion = "nearest" if nearest else "earliest"
         state, pending = initial, list(targets)
         while pending:
             moves = [move for target in pending for pair in pairs
-                     for move in _options(space, state, target, pair, limit, 1, True)
-                     if move[1].start <= deadline + EPS]
+                     for move in _options(space, state, target, pair, None, 1, initial.latest, deadline,
+                                          continuations, greedy=criterion)]
             if not moves:
                 break
-            _, choice, slews = min(moves, key=lambda move: (move[0], move[1].start, move[1].target))
+            def key(move):
+                distance, choice, _ = move
+                score = (distance, choice.start) if nearest else (choice.start, distance)
+                return (*score, choice.target, choice.vehicles, choice.stations)
+
+            _, choice, slews = min(moves, key=key)
             state = _advance(state, choice, slews)
             pending.remove(choice.target)
-        return state
+        return replace(state, choices=tuple(sorted(state.choices, key=lambda c: (c.start, c.target))))
 
     beams = {0: [initial]}
     best = initial
@@ -201,6 +302,8 @@ def solve(space, initial, targets, width=12, limit=12, branch=2, deadline=60., n
         pending = [(n, target) for n, target in enumerate(targets) if not (mask & (1 << n))]
         states = current if mask == 0 else [state for _, state in current]
         for state in states:
+            if stats is not None:
+                stats["expanded_states"] = stats.get("expanded_states", 0) + 1
             if (-len(state.choices), state.latest) < (-len(best.choices), best.latest):
                 best = state
             for n, target in pending:
@@ -208,16 +311,17 @@ def solve(space, initial, targets, width=12, limit=12, branch=2, deadline=60., n
                 remaining = [name for m, name in pending if m != n]
                 heap = beams.setdefault(new_mask, [])
                 for pair in pairs:
-                    options = tuple(_options(space, state, target, pair, limit, branch, False))
-                    if not options:
-                        options = tuple(_options(space, state, target, pair, max(3 * limit, 40), branch, False))
-                    if not options and space.exhaustive_fallback:
-                        options = tuple(_options(space, state, target, pair, None, branch, False))
+                    args = (branch, initial.latest, deadline, continuations)
+                    options = tuple(_options(space, state, target, pair, limit, *args))
+                    if not options and limit is not None:
+                        options = tuple(_options(space, state, target, pair, max(3 * limit, 40), *args))
+                    if not options and limit is not None:
+                        options = tuple(_options(space, state, target, pair, None, *args))
                     for _, choice, slews in options:
-                        if choice.start > deadline + EPS:
-                            continue
+                        if stats is not None:
+                            stats["generated_states"] = stats.get("generated_states", 0) + 1
                         nxt = _advance(state, choice, slews)
-                        optimistic = max([nxt.latest, *(space.lower_ready(t, nxt.positions, nxt.releases) for t in remaining)])
+                        optimistic = max([nxt.latest, *(space.lower_ready(t, nxt, continuations) for t in remaining)])
                         score = (optimistic, nxt.latest, sum(x for x in nxt.releases if np.isfinite(x)))
                         heap.append((score, nxt))
                 if len(heap) > width:
@@ -225,7 +329,7 @@ def solve(space, initial, targets, width=12, limit=12, branch=2, deadline=60., n
                     signatures = set()
                     selected = []
                     for score, nxt in heap:
-                        signature = (nxt.positions, tuple(round(r, 8) for r in nxt.releases))
+                        signature = (nxt.positions, tuple(round(r, 8) for r in nxt.releases), nxt.used & hold_mask)
                         if signature in signatures:
                             continue
                         signatures.add(signature)
@@ -243,20 +347,28 @@ def make_leg(router, vehicle, origin, station, depart, target):
     return Leg(vehicle, path, depart, arrive, arrive + slew, pan, tilt, slew)
 
 
-def build_plan(space, initial, solution):
+def build_plan(space, initial, solution, *, continuations=None):
     positions = space.points[list(initial.positions)].copy()
     releases = list(initial.releases)
+    pending = dict(continuations or {})
     plan = []
-    clock = initial.latest
     for choice in solution.choices:
         target = space.targets[choice.target]
-        legs = tuple(make_leg(space.router, v, positions[v], space.points[p], releases[v], target)
-                     for v, p in zip(choice.vehicles, choice.stations))
-        clock = max(clock, *(leg.ready for leg in legs))
-        plan.append(Mission(choice.target, clock, legs))
+        legs = []
+        for v, p in zip(choice.vehicles, choice.stations):
+            ongoing = pending.pop(v, None)
+            if ongoing is not None and ongoing.target == choice.target and ongoing.station == p:
+                legs.append(ongoing.leg)
+            else:
+                legs.append(make_leg(space.router, v, positions[v], space.points[p], releases[v], target))
+        start = max(initial.latest, *(leg.ready for leg in legs))
+        if abs(start - choice.start) > 1e-7:
+            raise ValueError("Reconstructed start time differs from the search.")
+        plan.append(Mission(choice.target, start, tuple(legs)))
         for leg in legs:
             positions[leg.vehicle] = leg.path[-1]
-            releases[leg.vehicle] = clock + OBSERVE + leg.slew
+            releases[leg.vehicle] = start + OBSERVE + leg.slew
+    plan.sort(key=lambda m: (m.start, m.target))
     return plan, positions, tuple(releases)
 
 
@@ -266,7 +378,6 @@ def evaluate_fixed(router, targets, layout, origins, availability, *,
     positions = np.asarray(origins).copy()
     releases = list(availability)
     plan = []
-    clock = 0.
     for name, vehicles, stations in layout:
         target = targets[name]
         stations = np.asarray(stations, dtype=float)
@@ -280,12 +391,12 @@ def evaluate_fixed(router, targets, layout, origins, availability, *,
         if max_rmse is not None and geom["linear_rmse_m"] > max_rmse + EPS:
             return None
         legs = tuple(make_leg(router, v, positions[v], station, releases[v], target) for v, station in zip(vehicles, stations))
-        clock = max(clock, *(leg.ready for leg in legs))
-        plan.append(Mission(name, clock, legs))
+        start = max(leg.ready for leg in legs)
+        plan.append(Mission(name, start, legs))
         for leg in legs:
             positions[leg.vehicle] = leg.path[-1]
-            releases[leg.vehicle] = clock + OBSERVE + leg.slew
-    return plan
+            releases[leg.vehicle] = start + OBSERVE + leg.slew
+    return sorted(plan, key=lambda m: (m.start, m.target))
 
 
 def refine(router, targets, plan, origins, availability, *, max_rmse=None, min_angle=MIN_ANGLE, los_margin=0.):
@@ -321,9 +432,41 @@ def refine(router, targets, plan, origins, availability, *, max_rmse=None, min_a
     return best
 
 
+def _first_ready(space, initial, name):
+    ids = space.station_ids[name]
+    return (space.travel[np.ix_(initial.positions, ids)] + space.slews[name] +
+            np.asarray(initial.releases)[:, None])
+
+
+def _earliest_partner(compatible, times):
+    order = np.argsort(times, kind="stable")
+    possible = compatible[:, order]
+    first = order[np.argmax(possible, axis=1)]
+    return first, np.where(possible.any(axis=1), times[first], np.inf)
+
+
+def reuse_chain_lower_bound(space, initial):
+    """Lower bound over all reuse patterns on the same three-alert candidate set."""
+    names = tuple(space.targets)
+    if len(names) != 3 or len(initial.positions) != 5 or any(not space.compatible[j].any() for j in names):
+        return None
+    ready = {j: _first_ready(space, initial, j) for j in names}
+    other = {j: np.array([_earliest_partner(space.compatible[j], np.delete(ready[j], v, axis=0).min(axis=0))[1]
+                          for v in range(5)]) for j in names}
+    synchronized = {j: np.maximum(np.maximum(ready[j], other[j]), initial.latest) for j in names}
+    chain = {}
+    for j, k, third in permutations(names):
+        transfer = space.travel[np.ix_(space.station_ids[j], space.station_ids[k])]
+        release = synchronized[j] + OBSERVE + space.slews[j]
+        independent = synchronized[third].min()
+        chain[j + "->" + k] = [
+            float(max(independent, np.maximum((first[:, None] + transfer).min(axis=0) + space.slews[k], mate).min()))
+            for first, mate in zip(release, other[k])]
+    return dict(lower_bound_s=min(min(values) for values in chain.values()), by_chain_vehicle_s=chain)
+
+
 def single_reuse(space, initial):
     """Exactly solve the finite-grid subproblem with one reused vehicle."""
-    from itertools import permutations
 
     names = tuple(space.targets)
     vehicles = tuple(v for v, time in enumerate(initial.releases) if np.isfinite(time))
@@ -335,15 +478,10 @@ def single_reuse(space, initial):
     independent = {}
     for name in names:
         ids = space.station_ids[name]
-        times = space.travel[np.ix_(initial.positions, ids)] + space.slews[name]
-        times = times + np.asarray(initial.releases)[:, None]
+        times = _first_ready(space, initial, name)
         ready[name] = times
         for v in vehicles:
-            order = np.argsort(times[v], kind="stable")
-            possible = space.compatible[name][:, order]
-            first = order[np.argmax(possible, axis=1)]
-            partner_station[name, v] = first
-            partner_time[name, v] = np.where(possible.any(axis=1), times[v, first], np.inf)
+            partner_station[name, v], partner_time[name, v] = _earliest_partner(space.compatible[name], times[v])
         for v, w in combinations(vehicles, 2):
             simultaneous = np.maximum(np.maximum(times[v], partner_time[name, w]), initial.latest)
             p = int(np.argmin(simultaneous))

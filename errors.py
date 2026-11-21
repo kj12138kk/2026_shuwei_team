@@ -80,3 +80,55 @@ def validate_intersection(p, q, target):
     return dict(covariance_m2=covariance.tolist(), cutoff_deg=10., samples=len(noise),
                 rejected=int((~valid).sum()), monte_carlo_conditional_rmse_m=float(np.sqrt(np.mean(radii ** 2))),
                 monte_carlo_conditional_p95_m=float(np.quantile(radii, .95)))
+
+
+def intersection_sweep(samples=300_000, cutoff_deg=10.):
+    """Check local DRMS against exact line intersections at varied geometries."""
+    if samples < 1 or not 0. < cutoff_deg < 90.:
+        raise ValueError("Use a positive sample count and a rejection angle between 0 and 90 degrees.")
+    sigma = np.deg2rad(1.)
+    cutoff = np.deg2rad(cutoff_deg)
+    noise = np.random.default_rng(SEED + 2).normal(0., sigma, (2, samples))
+    angles = (1, 5, 10, 15, 30, 45, 60, 90, 120, 150, 165, 170, 175, 179)
+    ranges = ((10., 10.), (20., 20.), (40., 40.), (10., 20.), (10., 40.))
+    rows = []
+    for angle in angles:
+        gamma = np.deg2rad(angle)
+        nominal = np.array([0., gamma])
+        measured = nominal[:, None] + noise
+        u, v = (np.column_stack((np.cos(a), np.sin(a))) for a in measured)
+        cross = np.sin(measured[1] - measured[0])
+        kept = np.abs(cross) >= np.sin(cutoff)
+        accepted = int(kept.sum())
+        for r, s in ranges:
+            p = np.array([-r, 0.])
+            q = -s * np.array([np.cos(gamma), np.sin(gamma)])
+            direction = q - p
+            numerator = direction[0] * v[:, 1] - direction[1] * v[:, 0]
+            norm = np.linalg.norm(cross[:, None] * p + numerator[:, None] * u, axis=1)
+            error = np.divide(norm, np.abs(cross), out=np.full(samples, np.inf), where=cross != 0.)
+            theory = sigma * np.hypot(r, s) / np.sin(gamma)
+            y = r * noise[0]
+            linear_error = np.hypot((y * np.cos(gamma) - s * noise[1]) / np.sin(gamma), y)
+            conditional = error[kept]
+            rmse = float(np.sqrt(np.mean(conditional ** 2))) if accepted else None
+            filtered_linear = float(np.sqrt(np.mean(linear_error[kept] ** 2))) if accepted else None
+            rows.append(dict(angle_deg=angle, range_1_m=r, range_2_m=s, bearing_sd_deg=1.,
+                             reject_within_deg=cutoff_deg, samples=samples, accepted=accepted,
+                             rejection_rate=1. - accepted / samples, theoretical_drms_m=float(theory),
+                             linear_p95_m=float(np.quantile(linear_error, .95)),
+                             unfiltered_p95_m=float(np.quantile(error, .95)),
+                             conditional_rmse_m=rmse, conditional_linear_rmse_m=filtered_linear,
+                             conditional_p95_m=float(np.quantile(conditional, .95)) if accepted else None,
+                             conditional_to_linear_ratio=rmse / filtered_linear if filtered_linear else None))
+    return rows
+
+
+def pointing_variance_curve():
+    """Shares of first-order horizontal bearing variance at the specified 40 m range."""
+    s = np.arange(0., 101.)
+    variances = np.column_stack((np.rad2deg((.3 + .02 * s) / 40.) ** 2,
+                                  np.full(len(s), .8 ** 2), np.full(len(s), .6 ** 2)))
+    shares = variances / variances.sum(axis=1, keepdims=True)
+    return [dict(distance_m=float(d), position=float(p), zero_offset=float(z), control=float(c))
+            for d, (p, z, c) in zip(s, shares)]
