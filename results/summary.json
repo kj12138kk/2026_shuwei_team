@@ -272,10 +272,10 @@
     "covariance_m2": [
       [
         0.010313834470569761,
-        2.168404344971009e-19
+        -2.117055731048215e-19
       ],
       [
-        2.168404344971009e-19,
+        -8.962702696105631e-20,
         0.010313834470569737
       ]
     ],
@@ -295,45 +295,45 @@
     "optimized": [
       {
         "target": "T1",
-        "start_s": 1.5322464680719503,
-        "end_s": 6.53224646807195,
-        "baseline_m": 35.45484966820229,
-        "angle_deg": 19.795147443369423,
+        "start_s": 1.5321921299917185,
+        "end_s": 6.532192129991719,
+        "baseline_m": 35.45589765583659,
+        "angle_deg": 19.795340067871038,
         "ranges_m": [
-          71.66313773532048,
-          41.58192095406417
+          71.66333097650904,
+          41.58085792876589
         ],
-        "linear_rmse_m": 4.269974601535342,
+        "linear_rmse_m": 4.269915837175364,
         "legs": [
           {
             "vehicle": "V3",
             "station": [
-              15.04270421423486,
-              87.07864999265735
+              15.042500299345123,
+              87.07862985848311
             ],
             "depart_s": 0.0,
-            "arrive_s": 0.5000797586433178,
-            "pointing_ready_s": 1.5322464675268312,
-            "drive_m": 1.5002392759299534,
-            "slew_s": 1.0321667088835134,
-            "los_clearance_m": 5.547981449921014,
-            "wait_s": 5.45119061001742e-10,
-            "available_s": 7.564413176955464
+            "arrive_s": 0.5000276932048607,
+            "pointing_ready_s": 1.5321921299917185,
+            "drive_m": 1.500083079614582,
+            "slew_s": 1.0321644367868577,
+            "los_clearance_m": 5.547985911298791,
+            "wait_s": 0.0,
+            "available_s": 7.564356566778576
           },
           {
             "vehicle": "V5",
             "station": [
-              49.999509912443656,
-              93.00048251076365
+              50.00045096042315,
+              92.99997802919496
             ],
             "depart_s": 0.0,
-            "arrive_s": 0.00022925057855675078,
-            "pointing_ready_s": 1.5322464680719503,
-            "drive_m": 0.0006877517356702524,
-            "slew_s": 1.5320172174933935,
-            "los_clearance_m": 7.136438518201986,
-            "wait_s": 0.0,
-            "available_s": 8.064263685565344
+            "arrive_s": 0.00015049843835400576,
+            "pointing_ready_s": 1.5321921149103963,
+            "drive_m": 0.0004514953150620173,
+            "slew_s": 1.5320416164720423,
+            "los_clearance_m": 7.136297470972244,
+            "wait_s": 1.5081322191079494e-08,
+            "available_s": 8.064233746463762
           }
         ]
       },
@@ -383,30 +383,30 @@
       },
       {
         "target": "T3",
-        "start_s": 10.352126436676599,
-        "end_s": 15.352126436676599,
-        "baseline_m": 106.12053275264098,
-        "angle_deg": 126.41967434955876,
+        "start_s": 10.35212445565663,
+        "end_s": 15.35212445565663,
+        "baseline_m": 106.12053275363384,
+        "angle_deg": 126.41967434989711,
         "ranges_m": [
-          86.80284312488105,
+          86.80284312578483,
           28.356940699327097
         ],
-        "linear_rmse_m": 1.9806231271636543,
+        "linear_rmse_m": 1.980623127190917,
         "legs": [
           {
             "vehicle": "V3",
             "station": [
-              16.765599489979653,
-              88.65893245959012
+              16.765599489086167,
+              88.65893246012047
             ],
-            "depart_s": 7.564413176955464,
-            "arrive_s": 8.343704935646851,
-            "pointing_ready_s": 10.352126436676599,
-            "drive_m": 2.3378752760741657,
-            "slew_s": 2.0084215010297486,
-            "los_clearance_m": 4.993829097689909e-08,
+            "depart_s": 7.564356566778576,
+            "arrive_s": 8.343702954638161,
+            "pointing_ready_s": 10.35212445565663,
+            "drive_m": 2.338039163578754,
+            "slew_s": 2.00842150101847,
+            "los_clearance_m": 5.007068570941848e-08,
             "wait_s": 0.0,
-            "available_s": 17.360547937706347
+            "available_s": 17.3605459566751
           },
           {
             "vehicle": "V2",
@@ -420,8 +420,8 @@
             "drive_m": 0.0,
             "slew_s": 5.77758935398496,
             "los_clearance_m": 10.611853619750734,
-            "wait_s": 4.574537082691639,
-            "available_s": 21.12971579066156
+            "wait_s": 4.57453510167167,
+            "available_s": 21.12971380964159
           }
         ]
       }
@@ -659,7 +659,7 @@
           93.58675279917125,
           13.82308546376021
         ],
-        "linear_rmse_m": 2.0656232952515574,
+        "linear_rmse_m": 2.065623295251558,
         "legs": [
           {
             "vehicle": "V2",
@@ -694,13 +694,13 @@
         ]
       }
     ],
-    "max_start_s": 10.352126436676599,
+    "max_start_s": 10.35212445565663,
     "nearest_max_start_s": 13.13920784472012,
     "earliest_max_start_s": 10.968984244492779,
-    "improvement_s": 2.7870814080435213,
-    "improvement_ratio": 0.2121194398461005,
-    "continuous_lower_bound_s": 10.300624808916258,
-    "certified_gap_s": 0.051501627760341506,
+    "improvement_s": 2.78708338906349,
+    "improvement_ratio": 0.21211959061774455,
+    "continuous_lower_bound_s": 10.300621856936765,
+    "certified_gap_s": 0.051502598719865844,
     "refinements": [
       {
         "grid_m": 5.0,
@@ -873,27 +873,27 @@
         "cell_actual_m": 1.0,
         "lower_bound_s": 9.553116516314185,
         "by_target_pair_s": {
-          "T1->T2": 10.352126436676599,
+          "T1->T2": 10.35212445565663,
           "T1->T3": 9.553116516314185,
           "T2->T1": 12.223273117692296,
           "T2->T3": 12.593058668230567,
-          "T3->T1": 10.352126436676599,
+          "T3->T1": 10.35212445565663,
           "T3->T2": 11.297310087690173
         },
         "by_target_pair_vehicle_s": {
           "T1->T2": [
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663
           ],
           "T1->T3": [
-            10.352126436676599,
-            10.352126436676599,
+            10.35212445565663,
+            10.35212445565663,
             9.553116516314185,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663
           ],
           "T2->T1": [
             12.223273117692296,
@@ -910,11 +910,11 @@
             16.293387305133255
           ],
           "T3->T1": [
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663
           ],
           "T3->T2": [
             11.297310087690173,
@@ -929,27 +929,27 @@
         "cell_actual_m": 0.5,
         "lower_bound_s": 10.01361417202813,
         "by_target_pair_s": {
-          "T1->T2": 10.352126436676599,
+          "T1->T2": 10.35212445565663,
           "T1->T3": 10.01361417202813,
           "T2->T1": 12.254454773335853,
           "T2->T3": 12.624872852378974,
-          "T3->T1": 10.352126436676599,
+          "T3->T1": 10.35212445565663,
           "T3->T2": 11.326795359047951
         },
         "by_target_pair_vehicle_s": {
           "T1->T2": [
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663
           ],
           "T1->T3": [
-            10.352126436676599,
-            10.352126436676599,
+            10.35212445565663,
+            10.35212445565663,
             10.01361417202813,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663
           ],
           "T2->T1": [
             12.254454773335853,
@@ -966,11 +966,11 @@
             16.296962228401753
           ],
           "T3->T1": [
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663
           ],
           "T3->T2": [
             11.326795359047951,
@@ -985,27 +985,27 @@
         "cell_actual_m": 0.25,
         "lower_bound_s": 10.128813281339905,
         "by_target_pair_s": {
-          "T1->T2": 10.352126436676599,
+          "T1->T2": 10.35212445565663,
           "T1->T3": 10.128813281339905,
           "T2->T1": 12.300017226217058,
           "T2->T3": 12.670490257392466,
-          "T3->T1": 10.352126436676599,
+          "T3->T1": 10.35212445565663,
           "T3->T2": 11.339823965926856
         },
         "by_target_pair_vehicle_s": {
           "T1->T2": [
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663
           ],
           "T1->T3": [
-            10.352126436676599,
-            10.352126436676599,
+            10.35212445565663,
+            10.35212445565663,
             10.128813281339905,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663
           ],
           "T2->T1": [
             12.300017226217058,
@@ -1022,16 +1022,16 @@
             16.32710232781568
           ],
           "T3->T1": [
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663
           ],
           "T3->T2": [
             11.339823965926856,
             18.511696484110132,
-            12.180643683505032,
+            12.180643683505036,
             14.793874751426134,
             12.51515856617506
           ]
@@ -1041,27 +1041,27 @@
         "cell_actual_m": 0.125,
         "lower_bound_s": 10.247711780111636,
         "by_target_pair_s": {
-          "T1->T2": 10.352126436676599,
+          "T1->T2": 10.35212445565663,
           "T1->T3": 10.247711780111636,
           "T2->T1": 12.323432542357521,
           "T2->T3": 12.694310731096465,
-          "T3->T1": 10.352126436676599,
+          "T3->T1": 10.35212445565663,
           "T3->T2": 11.346340295509899
         },
         "by_target_pair_vehicle_s": {
           "T1->T2": [
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663
           ],
           "T1->T3": [
-            10.352126436676599,
-            10.352126436676599,
+            10.35212445565663,
+            10.35212445565663,
             10.247711780111636,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663
           ],
           "T2->T1": [
             12.323432542357521,
@@ -1078,11 +1078,11 @@
             16.34252355327154
           ],
           "T3->T1": [
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599,
-            10.352126436676599
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663,
+            10.35212445565663
           ],
           "T3->T2": [
             11.346340295509899,
@@ -1095,25 +1095,25 @@
       }
     ],
     "adaptive_bound": {
-      "lower_bound_s": 10.300624808916258,
-      "upper_bound_s": 10.352126436676599,
-      "absolute_gap_s": 0.051501627760341506,
-      "relative_gap": 0.004999854738497175,
+      "lower_bound_s": 10.300621856936765,
+      "upper_bound_s": 10.35212445565663,
+      "absolute_gap_s": 0.051502598719865844,
+      "relative_gap": 0.004999950433592741,
       "target_relative_gap": 0.005,
       "termination": "gap_target",
       "active_reuse_chains": [
         "V3:T1->T3"
       ],
       "root_pairs": 122,
-      "expanded_pairs": 2047,
+      "expanded_pairs": 2046,
       "pruned_children": 2949,
-      "remaining_pairs": 3314
+      "remaining_pairs": 3311
     },
     "vehicle_separation": {
       "optimized": {
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "closest_vehicles": "V3+V5",
-        "closest_time_s": 8.343704935646851,
+        "closest_time_s": 8.343702954638161,
         "closest_phases": "travel|idle",
         "conflicting_pairs": 0,
         "travel_travel_pairs": 0,
@@ -1214,9 +1214,9 @@
             ],
             "coordinates": 6,
             "starts_tried": 3,
-            "improvements": 1,
+            "improvements": 2,
             "before_s": 10.361838481669043,
-            "after_s": 10.352127098603518
+            "after_s": 10.35212593440629
           },
           {
             "vehicles": [
@@ -1229,54 +1229,54 @@
             "coordinates": 8,
             "starts_tried": 3,
             "improvements": 1,
-            "before_s": 10.352127098603518,
-            "after_s": 10.352126436676599
+            "before_s": 10.35212593440629,
+            "after_s": 10.35212445565663
           }
         ],
         "optimized": {
-          "max_start_s": 10.352126436676599,
+          "max_start_s": 10.35212445565663,
           "missions": [
             {
               "target": "T1",
-              "start_s": 1.5322464680719503,
-              "end_s": 6.53224646807195,
-              "baseline_m": 35.45484966820229,
-              "angle_deg": 19.795147443369423,
+              "start_s": 1.5321921299917185,
+              "end_s": 6.532192129991719,
+              "baseline_m": 35.45589765583659,
+              "angle_deg": 19.795340067871038,
               "ranges_m": [
-                71.66313773532048,
-                41.58192095406417
+                71.66333097650904,
+                41.58085792876589
               ],
-              "linear_rmse_m": 4.269974601535342,
+              "linear_rmse_m": 4.269915837175364,
               "legs": [
                 {
                   "vehicle": "V3",
                   "station": [
-                    15.04270421423486,
-                    87.07864999265735
+                    15.042500299345123,
+                    87.07862985848311
                   ],
                   "depart_s": 0.0,
-                  "arrive_s": 0.5000797586433178,
-                  "pointing_ready_s": 1.5322464675268312,
-                  "drive_m": 1.5002392759299534,
-                  "slew_s": 1.0321667088835134,
-                  "los_clearance_m": 5.547981449921014,
-                  "wait_s": 5.45119061001742e-10,
-                  "available_s": 7.564413176955464
+                  "arrive_s": 0.5000276932048607,
+                  "pointing_ready_s": 1.5321921299917185,
+                  "drive_m": 1.500083079614582,
+                  "slew_s": 1.0321644367868577,
+                  "los_clearance_m": 5.547985911298791,
+                  "wait_s": 0.0,
+                  "available_s": 7.564356566778576
                 },
                 {
                   "vehicle": "V5",
                   "station": [
-                    49.999509912443656,
-                    93.00048251076365
+                    50.00045096042315,
+                    92.99997802919496
                   ],
                   "depart_s": 0.0,
-                  "arrive_s": 0.00022925057855675078,
-                  "pointing_ready_s": 1.5322464680719503,
-                  "drive_m": 0.0006877517356702524,
-                  "slew_s": 1.5320172174933935,
-                  "los_clearance_m": 7.136438518201986,
-                  "wait_s": 0.0,
-                  "available_s": 8.064263685565344
+                  "arrive_s": 0.00015049843835400576,
+                  "pointing_ready_s": 1.5321921149103963,
+                  "drive_m": 0.0004514953150620173,
+                  "slew_s": 1.5320416164720423,
+                  "los_clearance_m": 7.136297470972244,
+                  "wait_s": 1.5081322191079494e-08,
+                  "available_s": 8.064233746463762
                 }
               ]
             },
@@ -1326,30 +1326,30 @@
             },
             {
               "target": "T3",
-              "start_s": 10.352126436676599,
-              "end_s": 15.352126436676599,
-              "baseline_m": 106.12053275264098,
-              "angle_deg": 126.41967434955876,
+              "start_s": 10.35212445565663,
+              "end_s": 15.35212445565663,
+              "baseline_m": 106.12053275363384,
+              "angle_deg": 126.41967434989711,
               "ranges_m": [
-                86.80284312488105,
+                86.80284312578483,
                 28.356940699327097
               ],
-              "linear_rmse_m": 1.9806231271636543,
+              "linear_rmse_m": 1.980623127190917,
               "legs": [
                 {
                   "vehicle": "V3",
                   "station": [
-                    16.765599489979653,
-                    88.65893245959012
+                    16.765599489086167,
+                    88.65893246012047
                   ],
-                  "depart_s": 7.564413176955464,
-                  "arrive_s": 8.343704935646851,
-                  "pointing_ready_s": 10.352126436676599,
-                  "drive_m": 2.3378752760741657,
-                  "slew_s": 2.0084215010297486,
-                  "los_clearance_m": 4.993829097689909e-08,
+                  "depart_s": 7.564356566778576,
+                  "arrive_s": 8.343702954638161,
+                  "pointing_ready_s": 10.35212445565663,
+                  "drive_m": 2.338039163578754,
+                  "slew_s": 2.00842150101847,
+                  "los_clearance_m": 5.007068570941848e-08,
                   "wait_s": 0.0,
-                  "available_s": 17.360547937706347
+                  "available_s": 17.3605459566751
                 },
                 {
                   "vehicle": "V2",
@@ -1363,15 +1363,15 @@
                   "drive_m": 0.0,
                   "slew_s": 5.77758935398496,
                   "los_clearance_m": 10.611853619750734,
-                  "wait_s": 4.574537082691639,
-                  "available_s": 21.12971579066156
+                  "wait_s": 4.57453510167167,
+                  "available_s": 21.12971380964159
                 }
               ]
             }
           ],
-          "min_separation_m": 33.51629243838295,
+          "min_separation_m": 33.51716021614318,
           "closest_vehicles": "V3+V5",
-          "closest_time_s": 8.343704935646851,
+          "closest_time_s": 8.343702954638161,
           "closest_phases": "travel|idle",
           "conflicting_pairs": 0,
           "travel_travel_pairs": 0,
@@ -1624,7 +1624,7 @@
                 93.58675279917125,
                 13.82308546376021
               ],
-              "linear_rmse_m": 2.0656232952515574,
+              "linear_rmse_m": 2.065623295251558,
               "legs": [
                 {
                   "vehicle": "V2",
@@ -2175,7 +2175,7 @@
                 87.19922088460228,
                 28.356940699327097
               ],
-              "linear_rmse_m": 1.9867289271019601,
+              "linear_rmse_m": 1.9867289271019604,
               "legs": [
                 {
                   "vehicle": "V3",
@@ -2573,7 +2573,7 @@
                 27.077987539950943,
                 9.34935544482672
               ],
-              "linear_rmse_m": 0.499994692474696,
+              "linear_rmse_m": 0.49999469247469597,
               "legs": [
                 {
                   "vehicle": "V4",
@@ -2841,21 +2841,21 @@
           {
             "vehicle": "V3",
             "target": "T1",
-            "cumulative_travel_m": 1.5002392759299534,
-            "range_m": 71.66313773532048,
-            "position_sd_m": 0.3300047855185991,
-            "sigma_over_range": 0.004604944689101301,
-            "success_probability": 0.999998665532686,
+            "cumulative_travel_m": 1.500083079614582,
+            "range_m": 71.66333097650904,
+            "position_sd_m": 0.3300016615922916,
+            "sigma_over_range": 0.004604888680104262,
+            "success_probability": 0.999998665558358,
             "passes_95": true
           },
           {
             "vehicle": "V5",
             "target": "T1",
-            "cumulative_travel_m": 0.0006877517356702524,
-            "range_m": 41.58192095406417,
-            "position_sd_m": 0.3000137550347134,
-            "sigma_over_range": 0.007215004697982584,
-            "success_probability": 0.9999961757066996,
+            "cumulative_travel_m": 0.0004514953150620173,
+            "range_m": 41.58085792876589,
+            "position_sd_m": 0.30000902990630124,
+            "sigma_over_range": 0.007215075514321055,
+            "success_probability": 0.9999961755846473,
             "passes_95": true
           },
           {
@@ -2881,11 +2881,11 @@
           {
             "vehicle": "V3",
             "target": "T3",
-            "cumulative_travel_m": 3.838114552004119,
-            "range_m": 86.80284312488105,
-            "position_sd_m": 0.37676229104008235,
-            "sigma_over_range": 0.004340437219297575,
-            "success_probability": 0.9999987790192421,
+            "cumulative_travel_m": 3.838122243193336,
+            "range_m": 86.80284312578483,
+            "position_sd_m": 0.37676244486386673,
+            "sigma_over_range": 0.004340438991357752,
+            "success_probability": 0.999998779018532,
             "passes_95": true
           },
           {
@@ -2988,7 +2988,7 @@
   },
   "q4": {
     "scenario_count": 420,
-    "timeline_rows": 108464,
+    "timeline_rows": 110872,
     "aggregate": [
       {
         "kind": "nominal",
@@ -2996,14 +2996,14 @@
         "scenarios": 1,
         "all_started": 1,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "nominal",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "nominal",
@@ -3011,14 +3011,14 @@
         "scenarios": 1,
         "all_started": 1,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "nominal",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "nominal",
@@ -3026,14 +3026,14 @@
         "scenarios": 1,
         "all_started": 1,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "nominal",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "nominal",
@@ -3041,14 +3041,14 @@
         "scenarios": 1,
         "all_started": 1,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "nominal",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "nominal",
@@ -3056,14 +3056,14 @@
         "scenarios": 1,
         "all_started": 1,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "nominal",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "outage",
@@ -3071,14 +3071,14 @@
         "scenarios": 5,
         "all_started": 5,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "R10",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "outage",
@@ -3086,14 +3086,14 @@
         "scenarios": 5,
         "all_started": 5,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "R10",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "outage",
@@ -3101,14 +3101,14 @@
         "scenarios": 5,
         "all_started": 5,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "R10",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "outage",
@@ -3116,14 +3116,14 @@
         "scenarios": 5,
         "all_started": 5,
         "mean_eta": 1.0,
-        "mean_t_last_s": 11.01464446241786,
-        "mean_positive_original_delay_s": 0.22083934191375315,
+        "mean_t_last_s": 11.014643273801365,
+        "mean_positive_original_delay_s": 0.2208396060482452,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51671589976597,
         "worst_scenario": "R10",
         "worst_eta": 1.0,
-        "worst_t_last_s": 13.664716565382896
+        "worst_t_last_s": 13.664718546380309
       },
       {
         "kind": "outage",
@@ -3131,14 +3131,14 @@
         "scenarios": 5,
         "all_started": 5,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.352126436676599,
+        "mean_t_last_s": 10.35212445565663,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "R10",
         "worst_eta": 1.0,
-        "worst_t_last_s": 10.352126436676599
+        "worst_t_last_s": 10.35212445565663
       },
       {
         "kind": "failure",
@@ -3146,11 +3146,11 @@
         "scenarios": 5,
         "all_started": 1,
         "mean_eta": 0.7333333333333333,
-        "mean_t_last_s": 50.07042528733532,
+        "mean_t_last_s": 50.070424891131324,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 4,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "V1",
         "worst_eta": 0.6666666666666666,
         "worst_t_last_s": 60.0
@@ -3161,11 +3161,11 @@
         "scenarios": 5,
         "all_started": 1,
         "mean_eta": 0.7333333333333333,
-        "mean_t_last_s": 50.07042528733532,
+        "mean_t_last_s": 50.070424891131324,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 4,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "V1",
         "worst_eta": 0.6666666666666666,
         "worst_t_last_s": 60.0
@@ -3176,14 +3176,14 @@
         "scenarios": 5,
         "all_started": 5,
         "mean_eta": 1.0,
-        "mean_t_last_s": 11.658085973265477,
-        "mean_positive_original_delay_s": 0.896560590932925,
+        "mean_t_last_s": 11.658085268920546,
+        "mean_positive_original_delay_s": 0.8965607523552744,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "V1",
         "worst_eta": 1.0,
-        "worst_t_last_s": 13.139377684036102
+        "worst_t_last_s": 13.139386111294428
       },
       {
         "kind": "failure",
@@ -3192,10 +3192,10 @@
         "all_started": 5,
         "mean_eta": 1.0,
         "mean_t_last_s": 15.209018484785247,
-        "mean_positive_original_delay_s": 3.3250165111413166,
+        "mean_positive_original_delay_s": 3.32501829511575,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 35.45484966820229,
+        "min_separation_m": 35.455456698146385,
         "worst_scenario": "V1",
         "worst_eta": 1.0,
         "worst_t_last_s": 15.777589353984961
@@ -3206,14 +3206,14 @@
         "scenarios": 5,
         "all_started": 5,
         "mean_eta": 1.0,
-        "mean_t_last_s": 10.833346713934835,
-        "mean_positive_original_delay_s": 0.6853338503710703,
+        "mean_t_last_s": 10.833310332047132,
+        "mean_positive_original_delay_s": 0.6853211570670689,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "V1",
         "worst_eta": 1.0,
-        "worst_t_last_s": 11.077529535709498
+        "worst_t_last_s": 11.077448769110896
       },
       {
         "kind": "failure+outage",
@@ -3221,11 +3221,11 @@
         "scenarios": 25,
         "all_started": 5,
         "mean_eta": 0.7333333333333333,
-        "mean_t_last_s": 50.07042528733532,
+        "mean_t_last_s": 50.070424891131324,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 20,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "V1_R10",
         "worst_eta": 0.6666666666666666,
         "worst_t_last_s": 60.0
@@ -3236,11 +3236,11 @@
         "scenarios": 25,
         "all_started": 5,
         "mean_eta": 0.7333333333333333,
-        "mean_t_last_s": 50.07042528733532,
+        "mean_t_last_s": 50.070424891131324,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 20,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "V1_R10",
         "worst_eta": 0.6666666666666666,
         "worst_t_last_s": 60.0
@@ -3251,14 +3251,14 @@
         "scenarios": 25,
         "all_started": 25,
         "mean_eta": 1.0,
-        "mean_t_last_s": 20.512657021574924,
-        "mean_positive_original_delay_s": 3.84808427370274,
+        "mean_t_last_s": 20.512664423280533,
+        "mean_positive_original_delay_s": 3.8480871371419387,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "V1_R30",
         "worst_eta": 1.0,
-        "worst_t_last_s": 33.65152917101878
+        "worst_t_last_s": 33.651529170905235
       },
       {
         "kind": "failure+outage",
@@ -3266,14 +3266,14 @@
         "scenarios": 25,
         "all_started": 25,
         "mean_eta": 1.0,
-        "mean_t_last_s": 22.245782058041037,
-        "mean_positive_original_delay_s": 4.557944560489986,
+        "mean_t_last_s": 22.24579750702962,
+        "mean_positive_original_delay_s": 4.557950212007912,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51671589976597,
         "worst_scenario": "V1_R30",
         "worst_eta": 1.0,
-        "worst_t_last_s": 35.075113998470755
+        "worst_t_last_s": 35.075152364830664
       },
       {
         "kind": "failure+outage",
@@ -3281,14 +3281,14 @@
         "scenarios": 25,
         "all_started": 25,
         "mean_eta": 1.0,
-        "mean_t_last_s": 20.512657021574924,
-        "mean_positive_original_delay_s": 3.84808427370274,
+        "mean_t_last_s": 20.512664423280533,
+        "mean_positive_original_delay_s": 3.8480871371419387,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "V1_R30",
         "worst_eta": 1.0,
-        "worst_t_last_s": 33.65152917101878
+        "worst_t_last_s": 33.651529170905235
       },
       {
         "kind": "new",
@@ -3300,7 +3300,7 @@
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "N000_30",
         "worst_eta": 0.75,
         "worst_t_last_s": 60.0
@@ -3311,11 +3311,11 @@
         "scenarios": 24,
         "all_started": 24,
         "mean_eta": 1.0,
-        "mean_t_last_s": 17.913812317001984,
+        "mean_t_last_s": 17.91381182174107,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 23.273070901966822,
+        "min_separation_m": 23.27307090282826,
         "worst_scenario": "N225_50",
         "worst_eta": 1.0,
         "worst_t_last_s": 20.33750781377486
@@ -3326,11 +3326,11 @@
         "scenarios": 24,
         "all_started": 24,
         "mean_eta": 1.0,
-        "mean_t_last_s": 17.913812317001984,
+        "mean_t_last_s": 17.91381182174107,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 23.273070901966822,
+        "min_separation_m": 23.27307090282826,
         "worst_scenario": "N225_50",
         "worst_eta": 1.0,
         "worst_t_last_s": 20.33750781377486
@@ -3341,11 +3341,11 @@
         "scenarios": 24,
         "all_started": 24,
         "mean_eta": 1.0,
-        "mean_t_last_s": 19.232296982578067,
-        "mean_positive_original_delay_s": 3.405706084337124,
+        "mean_t_last_s": 19.23229541426015,
+        "mean_positive_original_delay_s": 3.4057060391350293,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.63536162824326,
+        "min_separation_m": 33.63583686991388,
         "worst_scenario": "N225_50",
         "worst_eta": 1.0,
         "worst_t_last_s": 21.046916626734507
@@ -3357,10 +3357,10 @@
         "all_started": 24,
         "mean_eta": 1.0,
         "mean_t_last_s": 16.659547896512247,
-        "mean_positive_original_delay_s": 2.021731605765791,
+        "mean_positive_original_delay_s": 2.021732238591614,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 28.47049628833469,
+        "min_separation_m": 28.470496289288924,
         "worst_scenario": "N000_30",
         "worst_eta": 1.0,
         "worst_t_last_s": 16.68102537646516
@@ -3375,7 +3375,7 @@
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "N000_30_R10",
         "worst_eta": 0.75,
         "worst_t_last_s": 60.0
@@ -3386,14 +3386,14 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 24.114012552268786,
+        "mean_t_last_s": 24.114016535634065,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 23.273070901966822,
+        "min_separation_m": 23.27307090282826,
         "worst_scenario": "N225_50_R30",
         "worst_eta": 1.0,
-        "worst_t_last_s": 35.20254061034968
+        "worst_t_last_s": 35.20254061009949
       },
       {
         "kind": "new+outage",
@@ -3401,14 +3401,14 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 24.114012552268786,
+        "mean_t_last_s": 24.114016535634065,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 23.273070901966822,
+        "min_separation_m": 23.27307090282826,
         "worst_scenario": "N225_50_R30",
         "worst_eta": 1.0,
-        "worst_t_last_s": 35.20254061034968
+        "worst_t_last_s": 35.20254061009949
       },
       {
         "kind": "new+outage",
@@ -3416,14 +3416,14 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 24.70121242936268,
-        "mean_positive_original_delay_s": 0.44261788171261857,
+        "mean_t_last_s": 24.701216528288175,
+        "mean_positive_original_delay_s": 0.44261808531654157,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 29.900300709109032,
+        "min_separation_m": 29.900300709778186,
         "worst_scenario": "N225_50_R30",
         "worst_eta": 1.0,
-        "worst_t_last_s": 35.20254061034968
+        "worst_t_last_s": 35.20254061009949
       },
       {
         "kind": "new+outage",
@@ -3431,14 +3431,14 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 23.864641420656152,
-        "mean_positive_original_delay_s": 0.40434632115315816,
+        "mean_t_last_s": 23.864645519579934,
+        "mean_positive_original_delay_s": 0.40434644771832284,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 28.47049628833469,
+        "min_separation_m": 28.47049628928892,
         "worst_scenario": "N225_50_R30",
         "worst_eta": 1.0,
-        "worst_t_last_s": 35.20254061034968
+        "worst_t_last_s": 35.20254061009949
       },
       {
         "kind": "new+failure",
@@ -3450,7 +3450,7 @@
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 96,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "N000_30_V1",
         "worst_eta": 0.5,
         "worst_t_last_s": 60.0
@@ -3461,11 +3461,11 @@
         "scenarios": 120,
         "all_started": 24,
         "mean_eta": 0.8,
-        "mean_t_last_s": 52.01374461972328,
+        "mean_t_last_s": 52.01374432256428,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 96,
         "conflicts_found": 0,
-        "min_separation_m": 28.26623134250794,
+        "min_separation_m": 28.266231343375253,
         "worst_scenario": "N000_30_V1",
         "worst_eta": 0.75,
         "worst_t_last_s": 60.0
@@ -3476,14 +3476,14 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 21.991187380235072,
-        "mean_positive_original_delay_s": 2.4202865452817894,
+        "mean_t_last_s": 21.991198313715163,
+        "mean_positive_original_delay_s": 2.4202876438977525,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 28.26623134250794,
+        "min_separation_m": 28.266231343375253,
         "worst_scenario": "N135_50_V1",
         "worst_eta": 1.0,
-        "worst_t_last_s": 28.807765433801457
+        "worst_t_last_s": 28.807848762739848
       },
       {
         "kind": "new+failure",
@@ -3491,14 +3491,14 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 20.99278998361583,
-        "mean_positive_original_delay_s": 5.093021237080049,
+        "mean_t_last_s": 20.992809941240726,
+        "mean_positive_original_delay_s": 5.093025626419765,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 23.273070901966822,
+        "min_separation_m": 23.27307090282826,
         "worst_scenario": "N135_40_V1",
         "worst_eta": 1.0,
-        "worst_t_last_s": 23.670398374484
+        "worst_t_last_s": 23.670448284724145
       },
       {
         "kind": "new+failure",
@@ -3506,14 +3506,14 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 20.674460089044366,
-        "mean_positive_original_delay_s": 3.2442333710228732,
+        "mean_t_last_s": 20.674473486587342,
+        "mean_positive_original_delay_s": 3.244235733015629,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 28.26623134250794,
+        "min_separation_m": 28.266231343375257,
         "worst_scenario": "N135_40_V1",
         "worst_eta": 1.0,
-        "worst_t_last_s": 23.670398374484
+        "worst_t_last_s": 23.670448284724145
       },
       {
         "kind": "new+failure+outage",
@@ -3525,7 +3525,7 @@
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 96,
         "conflicts_found": 0,
-        "min_separation_m": 33.51629243838295,
+        "min_separation_m": 33.51716021614318,
         "worst_scenario": "N000_50_V1_R10",
         "worst_eta": 0.5,
         "worst_t_last_s": 60.0
@@ -3536,11 +3536,11 @@
         "scenarios": 120,
         "all_started": 24,
         "mean_eta": 0.8,
-        "mean_t_last_s": 53.134320792296606,
+        "mean_t_last_s": 53.13432069323844,
         "mean_positive_original_delay_s": 0.0,
         "original_missing": 96,
         "conflicts_found": 0,
-        "min_separation_m": 23.273070901966822,
+        "min_separation_m": 23.27307090282826,
         "worst_scenario": "N000_50_V1_R10",
         "worst_eta": 0.75,
         "worst_t_last_s": 60.0
@@ -3551,11 +3551,11 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 27.54696909159243,
-        "mean_positive_original_delay_s": 4.343683862140421,
+        "mean_t_last_s": 27.546972838791014,
+        "mean_positive_original_delay_s": 4.3436859511769335,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 23.273070901966822,
+        "min_separation_m": 23.27307090282826,
         "worst_scenario": "N135_50_V1_R30",
         "worst_eta": 1.0,
         "worst_t_last_s": 40.81671119767463
@@ -3566,11 +3566,11 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 28.9288673042353,
-        "mean_positive_original_delay_s": 5.7223920159408435,
+        "mean_t_last_s": 28.928876663819697,
+        "mean_positive_original_delay_s": 5.722400185844765,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 28.93237134590413,
+        "min_separation_m": 28.93279304221529,
         "worst_scenario": "N180_50_V1_R30",
         "worst_eta": 1.0,
         "worst_t_last_s": 41.91587517642242
@@ -3581,11 +3581,11 @@
         "scenarios": 120,
         "all_started": 120,
         "mean_eta": 1.0,
-        "mean_t_last_s": 27.320296365583577,
-        "mean_positive_original_delay_s": 4.9996975071383165,
+        "mean_t_last_s": 27.320308143679394,
+        "mean_positive_original_delay_s": 4.999704018690936,
         "original_missing": 0,
         "conflicts_found": 0,
-        "min_separation_m": 23.273070901966822,
+        "min_separation_m": 23.27307090282826,
         "worst_scenario": "N135_50_V1_R30",
         "worst_eta": 1.0,
         "worst_t_last_s": 40.81671119767463
@@ -3593,7 +3593,7 @@
     ],
     "pressure": {
       "scenarios_per_model": 40,
-      "timeline_rows": 21512,
+      "timeline_rows": 21726,
       "aggregate": [
         {
           "model": "nominal",
@@ -3605,7 +3605,7 @@
           "mean_positive_original_delay_s": 0.0,
           "original_missing": 32,
           "conflicts_found": 0,
-          "min_separation_m": 33.51629243838295,
+          "min_separation_m": 33.51716021614318,
           "worst_scenario": "N000_50_V1_R30",
           "worst_eta": 0.5,
           "worst_t_last_s": 60.0
@@ -3616,11 +3616,11 @@
           "scenarios": 40,
           "all_started": 8,
           "mean_eta": 0.8,
-          "mean_t_last_s": 54.6624986842708,
+          "mean_t_last_s": 54.66249868426644,
           "mean_positive_original_delay_s": 0.0,
           "original_missing": 32,
           "conflicts_found": 0,
-          "min_separation_m": 30.099399606324752,
+          "min_separation_m": 30.099604512659024,
           "worst_scenario": "N000_50_V1_R30",
           "worst_eta": 0.75,
           "worst_t_last_s": 60.0
@@ -3631,11 +3631,11 @@
           "scenarios": 40,
           "all_started": 40,
           "mean_eta": 1.0,
-          "mean_t_last_s": 34.66265521700168,
-          "mean_positive_original_delay_s": 6.721639313035007,
+          "mean_t_last_s": 34.66266269010153,
+          "mean_positive_original_delay_s": 6.721640441386544,
           "original_missing": 0,
           "conflicts_found": 0,
-          "min_separation_m": 28.26623134250794,
+          "min_separation_m": 28.266231343375257,
           "worst_scenario": "N135_50_V1_R30",
           "worst_eta": 1.0,
           "worst_t_last_s": 40.81671119767463
@@ -3646,11 +3646,11 @@
           "scenarios": 40,
           "all_started": 40,
           "mean_eta": 1.0,
-          "mean_t_last_s": 37.017267746414426,
-          "mean_positive_original_delay_s": 7.265903214635467,
+          "mean_t_last_s": 37.0172708586703,
+          "mean_positive_original_delay_s": 7.265907419294098,
           "original_missing": 0,
           "conflicts_found": 0,
-          "min_separation_m": 31.20483563768562,
+          "min_separation_m": 31.204835638520684,
           "worst_scenario": "N180_50_V1_R30",
           "worst_eta": 1.0,
           "worst_t_last_s": 41.91587517642242
@@ -3661,11 +3661,11 @@
           "scenarios": 40,
           "all_started": 40,
           "mean_eta": 1.0,
-          "mean_t_last_s": 34.66265521700168,
-          "mean_positive_original_delay_s": 6.721639313035007,
+          "mean_t_last_s": 34.66266269010153,
+          "mean_positive_original_delay_s": 6.721640441386544,
           "original_missing": 0,
           "conflicts_found": 0,
-          "min_separation_m": 28.26623134250794,
+          "min_separation_m": 28.266231343375257,
           "worst_scenario": "N135_50_V1_R30",
           "worst_eta": 1.0,
           "worst_t_last_s": 40.81671119767463
