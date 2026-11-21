@@ -10,40 +10,58 @@ from scipy.spatial import cKDTree
 
 from disturbances import plan_events, scenarios
 from errors import probability
-from geometry import BUILDINGS, CAMERA, RADIUS, SPEED, STARTS, TARGETS, observable, pointing
+from geometry import BUILDINGS, CAMERA, RADIUS, SPEED, STARTS, TARGETS, pointing
+from problem1 import classification_grid
 
 COLORS = {"T1": "#0b7491", "T2": "#bc5536", "T3": "#62882c"}
 
 
-def _observation_patch(step):
-    axis = np.arange(step / 2., 100., step)
-    points = np.column_stack([a.ravel() for a in np.meshgrid(axis, axis)])
-    return observable(points, TARGETS[0]).reshape(len(axis), len(axis))
+def plot_t1(out, result):
+    grid = classification_grid(TARGETS[0], 0.1)
+    colors = ("#ebedf0", "#f8e3a3", "#ebc3b8", "#c1e5df")
+    labels = ("Body excluded", "Elevation > 80 deg", "Line of sight blocked", "Observable")
+    fig, (field, detail) = plt.subplots(1, 2, figsize=(10.5, 6.8),
+                                        gridspec_kw={"width_ratios": (1.35, 1.)}, constrained_layout=True)
+    station = result["selected_station_m"]
+    tx, ty = result["target_xy_m"]
+    radius = result["range_m"]
+    path = np.asarray(result["path_xy_m"])
+    for ax in (field, detail):
+        ax.imshow(grid, origin="lower", extent=(0, 100, 0, 100), aspect="equal",
+                  cmap=matplotlib.colors.ListedColormap(colors), vmin=-.5, vmax=3.5, interpolation="nearest")
+        ax.add_patch(Rectangle((RADIUS, RADIUS), 100 - 2 * RADIUS, 100 - 2 * RADIUS, fill=False,
+                               linewidth=.75, ls="--", ec="#6d7480"))
+        for n, (x0, x1, y0, y1, _) in enumerate(BUILDINGS, 1):
+            ax.add_patch(Rectangle((x0, y0), x1 - x0, y1 - y0, fc="#687480", ec="white"))
+            ax.text((x0 + x1) / 2, (y0 + y1) / 2, f"B{n}", color="white", ha="center", va="center", clip_on=True)
+        ax.scatter(*STARTS.T, marker="s", s=20, c="#3b4959", zorder=4)
+        ax.scatter(tx, ty, marker="^", s=70, c="#a94d3c", zorder=5)
+        ax.scatter(*station, marker="*", s=145, c="#032e48", edgecolors="white", linewidths=.45, zorder=6)
+        ax.set(xlabel="East x (m)", ylabel="North y (m)")
+    for n, p in enumerate(STARTS, 1):
+        field.annotate(f"V{n}", p, xytext=(5, 4), textcoords="offset points", fontsize=8)
+    field.set(title=f"T1 observable area = {result['continuous_areas_m2']['observable']:.1f} m$^2$",
+              xlim=(0, 100), ylim=(0, 100))
+    field.legend(handles=[Patch(facecolor=c, edgecolor="#888888", linewidth=.3, label=label)
+                          for c, label in zip(colors, labels)], loc="upper center",
+                 bbox_to_anchor=(.5, -.13), ncol=2, fontsize=8)
 
-
-def _q1_map(out, station):
-    steps = (.5, .25, .125)
-    areas = dict()
-    for step in steps:
-        visible = _observation_patch(step)
-        areas[str(step)] = float(visible.sum() * step * step)
-    fig, ax = plt.subplots(figsize=(7.0, 6.25), constrained_layout=True)
-    ax.imshow(np.ma.masked_where(~visible, visible), origin="lower", extent=(0, 100, 0, 100),
-              cmap=matplotlib.colors.ListedColormap(["#bfe2dd"]), interpolation="nearest")
-    ax.add_patch(Rectangle((RADIUS, RADIUS), 100 - 2 * RADIUS, 100 - 2 * RADIUS,
-                          linewidth=1, ls="--", edgecolor="#767676", facecolor="none"))
-    for n, (x0, x1, y0, y1, _) in enumerate(BUILDINGS, 1):
-        ax.add_patch(Rectangle((x0, y0), x1-x0, y1-y0, facecolor="#656f7c", edgecolor="white"))
-        ax.text((x0 + x1) / 2, (y0 + y1) / 2, f"B{n}", color="white", ha="center", va="center")
-    ax.scatter(*STARTS.T, marker="s", s=20, c="#485466", label="Vehicle initial position")
-    ax.scatter(*TARGETS[0].xy, marker="^", s=85, c="#bf5240", label="T1 ground projection")
-    ax.scatter(*station, marker="*", s=160, c="#053e53", label="Selected optimal station")
-    ax.plot([station[0], TARGETS[0].xy[0]], [station[1], TARGETS[0].xy[1]], color="#053e53", lw=1)
-    ax.set(xlabel="East x (m)", ylabel="North y (m)", title="T1 observable region (shaded)", xlim=(0, 100), ylim=(0, 100))
-    ax.legend(loc="upper center", bbox_to_anchor=(.5, -.10), ncol=2, fontsize=8)
-    fig.savefig(out / "q1_observable.png", dpi=180)
+    phi = np.linspace(0., 2. * np.pi, 361)
+    detail.plot(tx + radius * np.cos(phi), ty + radius * np.sin(phi), ls="--", color="#727881", lw=.9)
+    for interval in result["optimal_arc_intervals_deg"]:
+        a, b = np.deg2rad([interval["start_deg"], interval["end_deg"]])
+        arc = np.linspace(a, b, 241)
+        detail.plot(tx + radius * np.cos(arc), ty + radius * np.sin(arc), color="#137c81", lw=2.2)
+    detail.annotate("", xy=path[-1], xytext=path[0],
+                    arrowprops={"arrowstyle": "->", "color": "#273848", "lw": 1.25, "shrinkB": 5})
+    detail.text(76.5, 65.2, "B2", color="white", ha="center", va="center")
+    detail.annotate("T1", (tx, ty), xytext=(-2, 8), textcoords="offset points", fontsize=9)
+    detail.annotate(result["selected_vehicle"], path[0], xytext=(6, 4), textcoords="offset points", fontsize=9)
+    detail.annotate(f"P*  {result['ready_time_s']:.2f} s", station, xytext=(8, -12),
+                    textcoords="offset points", fontsize=9, color="#032e48")
+    detail.set(title="Quality-maximizing arc and selected station", xlim=(74.5, 94.5), ylim=(59.5, 79.5))
+    fig.savefig(out / "q1_observable.png", dpi=180, bbox_inches="tight", pad_inches=.14)
     plt.close(fig)
-    return areas
 
 
 def _hidden_cell(centers, half, target, box):

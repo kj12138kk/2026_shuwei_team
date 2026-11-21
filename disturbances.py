@@ -61,6 +61,15 @@ def scenarios():
     return discovery, out
 
 
+def pressure_scenarios():
+    """Cross all failure identities and eight edge/far-field bearings at late recovery."""
+    targets = tuple(Target(f"N{theta:03d}_50", theta, 50., 50.) for theta in range(0, 360, 45))
+    design = [Scenario(f"{target.name}_V{failure + 1}_R30", "new+failure+outage",
+                       target, failure, 30.)
+              for target, failure in product(targets, range(len(STARTS)))]
+    return targets, design
+
+
 def _point_event(vehicle, target, phase, begin, end, point, a=(0., 0.), b=(0., 0.)):
     return Event(vehicle, target, phase, begin, end, np.asarray([point]), *a, *b)
 
@@ -227,10 +236,13 @@ def score(starts, total):
     return len(in_window) / total, max(in_window, default=0.) if len(in_window) == total else WINDOW
 
 
-def run_scenario(space, nominal, scenario, width=8):
+def run_scenario(space, nominal, scenario, width=8, *, repair=False):
     if scenario.kind == "nominal":
         original = {m.target: m.start for m in nominal}
-        return {name: (original, plan_events(nominal)) for name in ("retain", "retain_plus", "replan_raw", "replan")}
+        names = ("retain", "retain_plus", "replan_raw", "replan")
+        if repair:
+            names = (*names, "repair")
+        return {name: (original, plan_events(nominal)) for name in names}
     prefix, locked, positions, release, engaged = replay(nominal, scenario)
     fixed_events, fixed, x, available = retain(space, nominal, scenario, locked, positions, release, engaged)
     pending = [m.target for m in nominal if m.target not in locked]
@@ -249,5 +261,14 @@ def run_scenario(space, nominal, scenario, width=8):
     append = ({**fixed, **extension}, strict[1] + extended)
     total = len(nominal) + int(scenario.new is not None)
     key = lambda s: (-score(s[0], total)[0], score(s[0], total)[1])
-    selected = adapt if key(adapt) < key(append) else append
-    return {"retain": strict, "retain_plus": append, "replan_raw": adapt, "replan": selected}
+    alternatives = {"retain": strict, "retain_plus": append, "replan_raw": adapt}
+    compared = [append]
+    if repair:
+        # Retain healthy pairs and original orders. Only unfixed jobs can be rebid.
+        disrupted = [name for name in pending if name not in fixed]
+        repairs, restored = _schedule(space, disrupted, x, available, scenario.cutoff, width)
+        repaired = ({**fixed, **restored}, strict[1] + repairs)
+        alternatives["repair"] = repaired
+        compared.append(repaired)
+    alternatives["replan"] = min([*compared, adapt], key=key)
+    return alternatives

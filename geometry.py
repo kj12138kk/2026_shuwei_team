@@ -63,18 +63,58 @@ def _box_interval(start, end, low, high, cap=1.):
     return entry <= exit_ + EPS
 
 
-def observable(points, target):
+def station_constraints(points, target):
+    """Return the separate vehicle-body, elevation and clear-sight masks."""
     points = np.asarray(points, dtype=float)
-    good = np.all((points >= RADIUS - EPS) & (points <= 100. - RADIUS + EPS), axis=-1)
+    body = np.all((points >= RADIUS - EPS) & (points <= 100. - RADIUS + EPS), axis=-1)
     _, tilt, _ = pointing(points, target)
-    good &= (tilt >= -10. - EPS) & (tilt <= 80. + EPS)
+    elevation = (tilt >= -10. - EPS) & (tilt <= 80. + EPS)
+    visible = np.ones(body.shape, dtype=bool)
+    end = np.broadcast_to(target.xy, points.shape)
     for x0, x1, y0, y1, height in BUILDINGS:
         low, high = np.array([x0, y0]), np.array([x1, y1])
         offset = np.maximum(np.maximum(low - points, points - high), 0.)
-        good &= np.sum(offset ** 2, axis=-1) >= (RADIUS - EPS) ** 2
+        body &= np.sum(offset ** 2, axis=-1) >= (RADIUS - EPS) ** 2
         cap = min(1., (height - CAMERA) / (target.height - CAMERA))
-        good &= ~_box_interval(points, np.broadcast_to(target.xy, points.shape), low, high, cap)
-    return good
+        visible &= ~_box_interval(points, end, low, high, cap)
+    return body, elevation, visible
+
+
+def observable(points, target):
+    body, elevation, visible = station_constraints(points, target)
+    return body & elevation & visible
+
+
+def los_clearance(points, target):
+    """Minimum Euclidean distance from each camera-to-target segment to any building."""
+    points = np.asarray(points, dtype=float)
+    shape = points.shape[:-1]
+    planar = points.reshape(-1, 2)
+    start = np.column_stack((planar, np.full(len(planar), CAMERA)))
+    direction = np.r_[target.xy, target.height] - start
+    clearance_sq = np.full(len(start), np.inf)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        for x0, x1, y0, y1, height in BUILDINGS:
+            low = np.array([x0, y0, 0.])
+            high = np.array([x1, y1, height])
+            moving = np.abs(direction) > EPS
+            entry = np.divide(low - start, direction, out=np.zeros_like(direction), where=moving)
+            exit_ = np.divide(high - start, direction, out=np.zeros_like(direction), where=moving)
+            cuts = np.sort(np.column_stack((np.zeros(len(start)), np.ones(len(start)),
+                                            np.clip(entry, 0., 1.), np.clip(exit_, 0., 1.))), axis=1)
+            left, right = cuts[:, :-1], cuts[:, 1:]
+            mid = start[:, None, :] + direction[:, None, :] * ((left + right) / 2.)[:, :, None]
+            below, above = mid < low, mid > high
+            slope = np.where(below | above, direction[:, None, :], 0.)
+            offset = np.where(below, start[:, None, :] - low, np.where(above, start[:, None, :] - high, 0.))
+            curvature = np.sum(slope * slope, axis=2)
+            minimizer = np.divide(-np.sum(offset * slope, axis=2), curvature,
+                                  out=left.copy(), where=curvature > 0.)
+            s = np.clip(minimizer, left, right)
+            position = start[:, None, :] + direction[:, None, :] * s[:, :, None]
+            error = np.maximum(np.maximum(low - position, position - high), 0.)
+            clearance_sq = np.minimum(clearance_sq, np.sum(error * error, axis=2).min(axis=1))
+    return np.sqrt(clearance_sq).reshape(shape)
 
 
 def pair_geometry(p, q, target):

@@ -8,11 +8,14 @@ from time import perf_counter
 
 import numpy as np
 
-from analysis_metrics import _q1_map, continuous_lower_bound, plot_probability, plot_scenarios, plot_schedule
-from disturbances import WINDOW, Event, plan_events, run_scenario, scenarios, score
-from errors import pointing_error_results, validate_intersection
-from geometry import BUILDINGS, EPS, RADIUS, SPEED, STARTS, TARGETS, Router, _box_interval, observable, pair_geometry, path_length, pointing
-from scheduler import State, Space, build_plan, refine, single_reuse, solve
+from analysis_metrics import continuous_lower_bound, plot_probability, plot_scenarios, plot_schedule, plot_t1
+from disturbances import WINDOW, Event, plan_events, pressure_scenarios, run_scenario, scenarios, score
+from errors import pointing_error_results
+from experiments import plan_stations, pointing_checks, polar_stations, schedule_experiments
+from geometry import BUILDINGS, EPS, RADIUS, SPEED, STARTS, TARGETS, Router, _box_interval, los_clearance, observable, pair_geometry, path_length, pointing
+from problem1 import solve_t1
+from problem2_accuracy import solve_t2_accuracy
+from scheduler import MIN_ANGLE, State, Space, build_plan, refine, single_reuse, solve
 
 
 def _as_float_list(points):
@@ -35,6 +38,7 @@ def _leg_summary(plan, targets):
                          legs=[dict(vehicle=f"V{leg.vehicle + 1}", station=_as_float_list(leg.path[-1]),
                                     depart_s=leg.depart, arrive_s=leg.arrive, pointing_ready_s=leg.ready,
                                     drive_m=path_length(leg.path), slew_s=leg.slew,
+                                    los_clearance_m=float(los_clearance(leg.path[-1], targets[mission.target])),
                                     wait_s=max(0., mission.start - leg.ready),
                                     available_s=mission.start + 5. + leg.slew)
                                for leg in mission.legs]))
@@ -58,7 +62,7 @@ def _independent_clearance(p, q, box):
     return nearest
 
 
-def verify(events, starts, targets):
+def verify(events, starts, targets, *, min_angle=MIN_ANGLE, max_rmse=None, los_margin=0.):
     by_vehicle = defaultdict(list)
     observations = defaultdict(list)
     for event in events:
@@ -94,8 +98,12 @@ def verify(events, starts, targets):
         if not np.all(observable(locations, target)):
             raise ValueError("Observation location is infeasible.")
         geom = pair_geometry(*locations, target)
-        if geom["baseline_m"] < 3. - 1e-6 or min(geom["angle_deg"], 180. - geom["angle_deg"]) < .01 - 1e-6:
+        if geom["baseline_m"] < 3. - 1e-6 or min(geom["angle_deg"], 180. - geom["angle_deg"]) < min_angle - 1e-6:
             raise ValueError("Scenario has an invalid pair.")
+        if max_rmse is not None and geom["linear_rmse_m"] > max_rmse + 1e-8:
+            raise ValueError("Scenario exceeds the DRMS limit.")
+        if los_margin and np.any(los_clearance(locations, target) < los_margin - 1e-8):
+            raise ValueError("Scenario violates the requested line-of-sight margin.")
         for event in pair:
             pan, tilt, _ = pointing(event.path[0], target)
             if max(abs(pan - event.pan0), abs(tilt - event.tilt0)) > 1e-7:
@@ -185,6 +193,93 @@ def _q4_records(space, plan, design, out):
     return dict(scenario_count=len(design), timeline_rows=len(timelines), aggregate=aggregate)
 
 
+def _export_q2_experiments(design, targets, out):
+    rows, timelines, metadata = [], [], {}
+    for name, trial in design.items():
+        constraints = trial["constraints"]
+        details = {}
+        for policy in ("optimized", "nearest"):
+            plan = trial[policy]
+            events = plan_events(plan)
+            verify(events, {m.target: m.start for m in plan}, targets, **constraints)
+            missions = _leg_summary(plan, targets)
+            details[policy] = dict(max_start_s=plan[-1].start, missions=missions)
+            for m in missions:
+                rows.append(dict(experiment=name, policy=policy, target=m["target"], start_s=m["start_s"],
+                                 max_start_s=plan[-1].start, vehicle_pair="+".join(l["vehicle"] for l in m["legs"]),
+                                 baseline_m=m["baseline_m"], angle_deg=m["angle_deg"], drms_m=m["linear_rmse_m"],
+                                 min_los_clearance_m=min(l["los_clearance_m"] for l in m["legs"]),
+                                 drms_limit_m=constraints.get("max_rmse", ""),
+                                 min_angle_deg=constraints.get("min_angle", MIN_ANGLE),
+                                 los_margin_m=constraints.get("los_margin", 0.)))
+            timelines.extend(_timeline_rows(events, name, policy, max(e.end for e in events)))
+        metadata[name] = dict(grid_m=trial["grid_m"], candidate_points=trial["points"],
+                              constraints=constraints, best_discrete_s=trial["best_discrete_s"], **details)
+    _write_csv(out / "q2_schedule_experiments.csv", rows)
+    _write_csv(out / "q2_experiment_timelines.csv", timelines)
+    return metadata
+
+
+def _q4_pressure(router, baseline_models, out):
+    new_targets, design = pressure_scenarios()
+    metrics, timelines = [], []
+    for name, (plan, constraints) in baseline_models.items():
+        nominal_times = {m.target: m.start for m in plan}
+        anchors = np.vstack((STARTS, plan_stations(plan)))
+        for new in new_targets:
+            pool = anchors
+            if constraints.get("max_rmse") is not None:
+                pool = np.vstack((anchors, polar_stations((*TARGETS, new), 15., 2.5)))
+            space = Space(router, (*TARGETS, new), 5., pool, **constraints)
+            for scenario in (case for case in design if case.new == new):
+                policies = run_scenario(space, plan, scenario, width=12, repair=True)
+                strictly_before = None
+                for policy, (starts, events) in policies.items():
+                    verify(events, starts, space.targets, **constraints)
+                    locked = {alert: t for alert, t in starts.items() if t < scenario.cutoff - EPS}
+                    if strictly_before is None:
+                        strictly_before = locked
+                    elif locked != strictly_before:
+                        raise ValueError("Pressure-test policies used different pre-command histories.")
+                    eta, last = score(starts, len(plan) + 1)
+                    delays = {alert: starts[alert] - t for alert, t in nominal_times.items()
+                              if alert in starts and starts[alert] <= WINDOW + EPS}
+                    delay_avg = float(np.mean([max(0., d) for d in delays.values()])) if delays else None
+                    chosen_policy = next((k for k, v in policies.items() if k != "replan" and policies[policy] is v), policy)
+                    metrics.append(dict(model=name, scenario=scenario.key, policy=policy, selected_policy=chosen_policy,
+                                        n=len(plan)+1, k=round((len(plan)+1)*eta), eta=eta, t_last_s=last,
+                                        all_started=int(eta == 1.), command_s=scenario.cutoff,
+                                        failure=f"V{scenario.failure + 1}", new_theta_deg=new.theta, new_range_m=new.distance,
+                                        t1_s=starts.get("T1", ""), t2_s=starts.get("T2", ""), t3_s=starts.get("T3", ""),
+                                        new_alert_s=starts.get(new.name, ""), locked_at_command=",".join(sorted(locked)),
+                                        original_missing=len(plan)-len(delays),
+                                        t1_delay_s=delays.get("T1", ""), t2_delay_s=delays.get("T2", ""),
+                                        t3_delay_s=delays.get("T3", ""), mean_positive_original_delay_s=delay_avg))
+                    timelines.extend(dict(model=name, **row) for row in
+                                     _timeline_rows(events, scenario.key, policy, WINDOW))
+        print(f"Pressure model {name}: {len(design)} paired scenarios", flush=True)
+    _write_csv(out / "q4_pressure_scenarios.csv", metrics)
+    _write_csv(out / "q4_pressure_timelines.csv", timelines)
+    groups = defaultdict(list)
+    for row in metrics:
+        groups[row["model"], row["policy"]].append(row)
+    aggregate = []
+    for (name, policy), group in groups.items():
+        worst = min(group, key=lambda row: (row["eta"], -row["t_last_s"], row["scenario"]))
+        delays = [max(0., row[f"t{i}_delay_s"]) for row in group for i in range(1, 4)
+                  if row[f"t{i}_delay_s"] != ""]
+        aggregate.append(dict(model=name, policy=policy, cases=len(group),
+                              all_started=sum(r["all_started"] for r in group),
+                              mean_eta=float(np.mean([r["eta"] for r in group])),
+                              mean_t_last_s=float(np.mean([r["t_last_s"] for r in group])),
+                              mean_positive_original_delay_s=float(np.mean(delays)) if delays else None,
+                              original_missing=sum(r["original_missing"] for r in group),
+                              worst_scenario=worst["scenario"], worst_eta=worst["eta"],
+                              worst_t_last_s=worst["t_last_s"]))
+    _write_csv(out / "q4_pressure_aggregate.csv", aggregate)
+    return dict(scenarios_per_model=len(design), timeline_rows=len(timelines), aggregate=aggregate)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parent / "results")
@@ -195,21 +290,10 @@ def main():
 
     router = Router()
     targets = {target.name: target for target in TARGETS}
-    t1, t2, _ = TARGETS
-    station1 = t1.xy + np.array([t1.min_range, 0.])
-    assert bool(observable(station1, t1))
-    q1 = dict(target_xy_m=_as_float_list(t1.xy), selected_station_m=_as_float_list(station1),
-              range_m=float(t1.min_range), elevation_deg=float(pointing(station1, t1)[1]), quality_per_m=float(1 / t1.min_range),
-              observable_area_by_grid_m2=_q1_map(out, station1))
+    q1 = solve_t1(router)
+    plot_t1(out, q1)
 
-    a, b = t2.xy + np.array([-t2.min_range, 0.]), t2.xy + np.array([0., t2.min_range])
-    assert np.all(observable([a, b], t2))
-    trip1, trip2 = router.path(STARTS[0], a), router.path(STARTS[2], b)
-    assert all(path_length(path) / SPEED <= 30. for path in (trip1, trip2))
-    q2_accuracy = dict(target_xy_m=_as_float_list(t2.xy), vehicles=["V1", "V3"],
-                       stations_m=_as_float_list([a, b]), travel_times_s=[path_length(path) / SPEED for path in (trip1, trip2)],
-                       elevation_deg=[float(pointing(p, t2)[1]) for p in (a, b)],
-                       **pair_geometry(a, b, t2), **validate_intersection(a, b, t2))
+    q2_accuracy = solve_t2_accuracy(router)
 
     optimized, nearest, sensitivity = _solve_q2_schedule(router, targets)
     timelines = []
@@ -228,7 +312,12 @@ def main():
                        improvement_s=nearest[-1].start - upper, improvement_ratio=1. - upper / nearest[-1].start,
                        continuous_lower_bound_s=lower, certified_gap_s=upper - lower,
                        refinements=sensitivity, cell_bounds=bounds)
+    trials = schedule_experiments(router, targets, optimized)
+    q2_schedule["experiments"] = _export_q2_experiments(trials, targets, out)
+    precision = trials["drms_0.50"]
     q3 = pointing_error_results()
+    q3["station_checks"] = pointing_checks({"nominal": optimized, "drms_0.50": precision["optimized"]},
+                                           targets, q2_accuracy, q3["sigma_limit_m"])
     plot_probability(out, q3)
     print(f"Q1-Q3 validated in {perf_counter()-tick:.1f} s", flush=True)
 
@@ -236,6 +325,8 @@ def main():
     anchors = np.vstack([STARTS, *(leg.path[-1] for m in optimized for leg in m.legs)])
     space = Space(router, (*TARGETS, *new_targets), 5., anchors)
     q4 = _q4_records(space, optimized, design, out)
+    q4["pressure"] = _q4_pressure(router, {"nominal": (optimized, {}),
+                                            "drms_0.50": (precision["optimized"], precision["constraints"])}, out)
     result = dict(q1=q1, q2_accuracy=q2_accuracy, q2_schedule=q2_schedule, q3=q3, q4=q4)
     (out / "summary.json").write_text(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(f"Wrote {len(list(out.iterdir()))} results in {perf_counter()-tick:.1f} s to {out}", flush=True)

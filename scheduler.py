@@ -4,9 +4,17 @@ from itertools import combinations
 
 import numpy as np
 
-from geometry import EPS, OBSERVE, RADIUS, SPEED, observable, pair_geometry, path_length, pointing
+from geometry import EPS, OBSERVE, RADIUS, SPEED, los_clearance, observable, pair_geometry, path_length, pointing
 
 MIN_ANGLE = 0.01  # Exclude non-identifiable pairs, with a small numerical guard.
+AZIMUTH_SD = np.deg2rad(1.)
+
+
+def _visible_with_margin(points, target, los_margin):
+    visible = observable(points, target)
+    if los_margin > 0. and np.any(visible):
+        visible[visible] = los_clearance(points[visible], target) >= los_margin - EPS
+    return visible
 
 
 @dataclass(frozen=True)
@@ -47,9 +55,12 @@ class Mission:
 
 
 class Space:
-    def __init__(self, router, targets, grid, anchors):
+    def __init__(self, router, targets, grid, anchors, *, max_rmse=None, min_angle=MIN_ANGLE, los_margin=0.):
+        if (max_rmse is not None and not max_rmse > 0.) or not 0. < min_angle <= 90. or not los_margin >= 0.:
+            raise ValueError("Invalid RMSE ceiling, minimum pair angle or line-of-sight margin.")
         self.router = router
         self.targets = {target.name: target for target in targets}
+        self.exhaustive_fallback = max_rmse is not None or min_angle != MIN_ANGLE or los_margin > 0.
         axis = np.unique(np.r_[RADIUS, np.arange(grid, 100., grid), 100. - RADIUS])
         coordinates = np.column_stack([a.ravel() for a in np.meshgrid(axis, axis)])
         phi = np.deg2rad(np.arange(0., 360., 15.))
@@ -57,7 +68,16 @@ class Space:
         rings = [t.xy + factor * t.min_range * direction for t in targets for factor in (1., 1.5)]
         points = np.unique(np.vstack([coordinates, anchors, *rings]), axis=0)
         free = router.free_points(points)
-        visible = {name: observable(points, t) for name, t in self.targets.items()}
+        visible = {}
+        for name, target in self.targets.items():
+            if max_rmse is None:
+                visible[name] = _visible_with_margin(points, target, los_margin)
+            else:
+                distance = np.linalg.norm(target.xy - points, axis=1)
+                close = (AZIMUTH_SD * np.hypot(distance, target.min_range) <= max_rmse + EPS) & free
+                mask = np.zeros(len(points), dtype=bool)
+                mask[close] = _visible_with_margin(points[close], target, los_margin)
+                visible[name] = mask
         keep = free & np.any(tuple(visible.values()), axis=0)
         self.points = points[keep]
         self.station_ids = {name: np.flatnonzero(good[keep]) for name, good in visible.items()}
@@ -68,15 +88,25 @@ class Space:
             target = self.targets[name]
             self.slews[name] = pointing(stations, target)[2]
             u = target.xy - stations
-            u /= np.linalg.norm(u, axis=1)[:, None]
-            cross = u[:, [0]] * u[:, 1] - u[:, [1]] * u[:, 0]
+            distance = np.linalg.norm(u, axis=1)
+            u /= distance[:, None]
+            sine = np.abs(u[:, [0]] * u[:, 1] - u[:, [1]] * u[:, 0])
             dx = stations[:, [0]] - stations[:, 0]
             dy = stations[:, [1]] - stations[:, 1]
-            self.compatible[name] = (np.abs(cross) >= np.sin(np.deg2rad(MIN_ANGLE))) & (dx * dx + dy * dy >= (2 * RADIUS - EPS) ** 2)
+            sine_floor = np.sin(np.deg2rad(min_angle))
+            if min_angle != MIN_ANGLE:
+                sine_floor -= EPS
+            compatible = (sine >= sine_floor) & (dx * dx + dy * dy >= (2 * RADIUS - EPS) ** 2)
+            if max_rmse is not None:
+                rmse_numerator = AZIMUTH_SD * np.hypot(distance[:, None], distance)
+                compatible &= rmse_numerator <= (max_rmse + EPS) * sine
+            self.compatible[name] = compatible
         self.travel = self._travel(self.points, self.points)
         self.min_ready = {}
 
     def _travel(self, starts, ends):
+        if not len(starts) or not len(ends):
+            return np.empty((len(starts), len(ends)))
         return np.concatenate([self.router.distances(starts[i:i + 64], ends) / SPEED
                                for i in range(0, len(starts), 64)])
 
@@ -102,16 +132,18 @@ class Space:
     def lower_ready(self, target, positions, releases):
         if target not in self.min_ready:
             ids = self.station_ids[target]
-            self.min_ready[target] = (self.travel[:, ids] + self.slews[target]).min(axis=1)
+            self.min_ready[target] = (self.travel[:, ids] + self.slews[target]).min(axis=1, initial=np.inf)
         return float(np.partition(self.min_ready[target][list(positions)] + releases, 1)[1])
 
 
 def _options(space, state, target, pair, limit, branch, nearest):
     ids = space.station_ids[target]
+    if not len(ids):
+        return
     i, j = pair
     drive = space.travel[np.ix_([state.positions[i], state.positions[j]], ids)]
     ready = drive + space.slews[target] + np.array([state.releases[i], state.releases[j]])[:, None]
-    if nearest:
+    if nearest or limit is None:
         a = b = np.arange(len(ids))
     else:
         a, b = (np.argsort(row, kind="stable")[:limit] for row in ready)
@@ -145,7 +177,7 @@ def _advance(state, choice, slews):
 
 def solve(space, initial, targets, width=12, limit=12, branch=2, deadline=60., nearest=False):
     """Beam search by completed-alert subset; earliest start for each chosen pair."""
-    targets = tuple(targets)
+    targets = tuple(target for target in targets if space.compatible[target].any())
     pairs = tuple(combinations([i for i, time in enumerate(initial.releases) if np.isfinite(time)], 2))
     if nearest:
         state, pending = initial, list(targets)
@@ -179,6 +211,8 @@ def solve(space, initial, targets, width=12, limit=12, branch=2, deadline=60., n
                     options = tuple(_options(space, state, target, pair, limit, branch, False))
                     if not options:
                         options = tuple(_options(space, state, target, pair, max(3 * limit, 40), branch, False))
+                    if not options and space.exhaustive_fallback:
+                        options = tuple(_options(space, state, target, pair, None, branch, False))
                     for _, choice, slews in options:
                         if choice.start > deadline + EPS:
                             continue
@@ -226,7 +260,8 @@ def build_plan(space, initial, solution):
     return plan, positions, tuple(releases)
 
 
-def evaluate_fixed(router, targets, layout, origins, availability):
+def evaluate_fixed(router, targets, layout, origins, availability, *,
+                   max_rmse=None, min_angle=MIN_ANGLE, los_margin=0.):
     """Recompute earliest times for fixed vehicle pairs and continuous stations."""
     positions = np.asarray(origins).copy()
     releases = list(availability)
@@ -234,10 +269,15 @@ def evaluate_fixed(router, targets, layout, origins, availability):
     clock = 0.
     for name, vehicles, stations in layout:
         target = targets[name]
-        if not np.all(observable(stations, target)) or not np.all(router.free_points(stations)):
+        stations = np.asarray(stations, dtype=float)
+        if not np.all(_visible_with_margin(stations, target, los_margin)) or not np.all(router.free_points(stations)):
             return None
         geom = pair_geometry(*stations, target)
-        if geom["baseline_m"] < 2. * RADIUS - EPS or not MIN_ANGLE <= geom["angle_deg"] <= 180. - MIN_ANGLE:
+        angle_slack = 0. if min_angle == MIN_ANGLE else EPS
+        if (geom["baseline_m"] < 2. * RADIUS - EPS or
+                not min_angle - angle_slack <= geom["angle_deg"] <= 180. - min_angle + angle_slack):
+            return None
+        if max_rmse is not None and geom["linear_rmse_m"] > max_rmse + EPS:
             return None
         legs = tuple(make_leg(router, v, positions[v], station, releases[v], target) for v, station in zip(vehicles, stations))
         clock = max(clock, *(leg.ready for leg in legs))
@@ -248,10 +288,15 @@ def evaluate_fixed(router, targets, layout, origins, availability):
     return plan
 
 
-def refine(router, targets, plan, origins, availability):
+def refine(router, targets, plan, origins, availability, *, max_rmse=None, min_angle=MIN_ANGLE, los_margin=0.):
     """Feasibility-preserving coordinate pattern search on the fixed task sequence."""
+    if not plan:
+        return plan
     layout = [(m.target, tuple(leg.vehicle for leg in m.legs), np.array([leg.path[-1] for leg in m.legs])) for m in plan]
-    best = plan
+    constraints = dict(max_rmse=max_rmse, min_angle=min_angle, los_margin=los_margin)
+    best = evaluate_fixed(router, targets, layout, origins, availability, **constraints)
+    if best is None:
+        return None
 
     def score(result):
         return (round(max(m.start for m in result), 9), round(sum(m.start for m in result), 9),
@@ -267,7 +312,7 @@ def refine(router, targets, plan, origins, availability):
                     winner = original
                     for direction in directions:
                         stations[i] = original + step * direction
-                        proposal = evaluate_fixed(router, targets, layout, origins, availability)
+                        proposal = evaluate_fixed(router, targets, layout, origins, availability, **constraints)
                         if proposal is not None and score(proposal) < score(best):
                             best, winner, improved = proposal, stations[i].copy(), True
                     stations[i] = winner
@@ -281,7 +326,9 @@ def single_reuse(space, initial):
     from itertools import permutations
 
     names = tuple(space.targets)
-    vehicles = tuple(range(len(initial.positions)))
+    vehicles = tuple(v for v, time in enumerate(initial.releases) if np.isfinite(time))
+    if len(names) != 3 or len(vehicles) != 5 or any(not space.compatible[name].any() for name in names):
+        return None
     ready = {}
     partner_time = {}
     partner_station = {}
@@ -289,6 +336,7 @@ def single_reuse(space, initial):
     for name in names:
         ids = space.station_ids[name]
         times = space.travel[np.ix_(initial.positions, ids)] + space.slews[name]
+        times = times + np.asarray(initial.releases)[:, None]
         ready[name] = times
         for v in vehicles:
             order = np.argsort(times[v], kind="stable")
@@ -297,10 +345,11 @@ def single_reuse(space, initial):
             partner_station[name, v] = first
             partner_time[name, v] = np.where(possible.any(axis=1), times[v, first], np.inf)
         for v, w in combinations(vehicles, 2):
-            simultaneous = np.maximum(times[v], partner_time[name, w])
+            simultaneous = np.maximum(np.maximum(times[v], partner_time[name, w]), initial.latest)
             p = int(np.argmin(simultaneous))
-            q = partner_station[name, w][p]
-            independent[name, v, w] = Choice(name, (v, w), (int(ids[p]), int(ids[q])), float(simultaneous[p]))
+            if np.isfinite(simultaneous[p]):
+                q = partner_station[name, w][p]
+                independent[name, v, w] = Choice(name, (v, w), (int(ids[p]), int(ids[q])), float(simultaneous[p]))
 
     best = None
     upper = np.inf
@@ -308,9 +357,9 @@ def single_reuse(space, initial):
         j_ids, k_ids = space.station_ids[j], space.station_ids[k]
         between = space.travel[np.ix_(j_ids, k_ids)]
         for i, u in permutations(vehicles, 2):
-            first = np.maximum(ready[j][i], partner_time[j, u])
+            first = np.maximum(np.maximum(ready[j][i], partner_time[j, u]), initial.latest)
             release = first + OBSERVE + space.slews[j]
-            eligible = np.flatnonzero(release + space.slews[k].min() <= upper + EPS)
+            eligible = np.flatnonzero(np.isfinite(release) & (release + space.slews[k].min() <= upper + EPS))
             if not len(eligible):
                 continue
             second = release[eligible, None] + between[eligible]
@@ -318,12 +367,12 @@ def single_reuse(space, initial):
             i_second = np.min(second, axis=0) + space.slews[k]
             for v in set(vehicles) - {i, u}:
                 w, z = sorted(set(vehicles) - {i, u, v})
-                other = independent[unused, w, z]
-                if other.start > upper + EPS:
+                other = independent.get((unused, w, z))
+                if other is None or other.start > upper + EPS:
                     continue
                 k_start = np.maximum(i_second, partner_time[k, v])
                 total = np.maximum(k_start, other.start)
-                near = np.flatnonzero(total <= min(upper, total.min()) + EPS)
+                near = np.flatnonzero(np.isfinite(total) & (total <= min(upper, total.min()) + EPS))
                 if not len(near):
                     continue
                 q = min(near, key=lambda index: (total[index], k_start[index] + first[best_p[index]]))
